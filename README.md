@@ -1,4 +1,4 @@
-# AI-Powered Business Lead Generation Platform
+# Lead Forge -AI-Powered Business Lead Generation Platform
 
 A SaaS platform that discovers businesses, enriches their profiles, audits their online presence, scores lead quality, and helps agencies acquire clients for web development, app development, and digital marketing.
 
