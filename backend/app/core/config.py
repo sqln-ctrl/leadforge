@@ -2,14 +2,12 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    DATABASE_URL: str = "sqlite:///./database.db"
-    SECRET_KEY: str = "change-this-secret"
-    REDIS_URL: str = "redis://localhost:6379"
-
+    DATABASE_URL: str
+    SECRET_KEY: str
+    REDIS_URL: str
 
     class Config:
         env_file = ".env"
 
 
-def get_settings():
-    return Settings()
+settings = Settings()
