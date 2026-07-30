@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.db import get_db
-from app.models.user import User
+from app.models.user import User, UserRole
 
 # settings = get_settings()
 
@@ -80,3 +80,4 @@ def require_role(*allowed_roles: UserRole):
         return current_user
 
     return _check_role
+
