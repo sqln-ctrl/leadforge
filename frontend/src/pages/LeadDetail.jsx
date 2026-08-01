@@ -17,7 +17,7 @@ export default function LeadDetail() {
   if (!lead) {
     return (
       <div className="text-sm text-ink-500">
-        Lead not found. <Link to="/" className="text-forge-600">Back to leads</Link>
+        Lead not found. <Link to="/app" className="text-forge-600">Back to leads</Link>
       </div>
     );
   }
@@ -31,7 +31,7 @@ export default function LeadDetail() {
 
   return (
     <div>
-      <Link to="/" className="mb-4 inline-flex items-center gap-1 text-sm text-ink-400 hover:text-ink-700">
+      <Link to="/app" className="mb-4 inline-flex items-center gap-1 text-sm text-ink-400 hover:text-ink-700">
         <ArrowLeft className="h-4 w-4" /> Back to leads
       </Link>
 

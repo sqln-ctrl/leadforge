@@ -18,7 +18,7 @@ export default function Login() {
     setSubmitting(true);
     try {
       await login(form.email, form.password);
-      navigate("/");
+      navigate("/app");
     } catch (err) {
       setError(err.response?.data?.detail || "Couldn't log in. Check your email and password.");
     } finally {

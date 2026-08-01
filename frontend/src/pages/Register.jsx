@@ -18,7 +18,7 @@ export default function Register() {
     setSubmitting(true);
     try {
       await register(form);
-      navigate("/");
+      navigate("/app");
     } catch (err) {
       setError(err.response?.data?.detail || "Couldn't create your account.");
     } finally {

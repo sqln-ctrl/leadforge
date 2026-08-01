@@ -1,13 +1,13 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, Link } from "react-router-dom";
 import clsx from "clsx";
 import { LayoutGrid, BarChart3, Search, LogOut } from "lucide-react";
 import Logomark from "./Logomark";
 import { useAuth } from "../../context/AuthContext";
 
 const NAV_ITEMS = [
-  { to: "/", label: "Leads", icon: LayoutGrid, end: true },
-  { to: "/discovery", label: "Discovery", icon: Search },
-  { to: "/analytics", label: "Analytics", icon: BarChart3 },
+  { to: "/app", label: "Leads", icon: LayoutGrid, end: true },
+  { to: "/app/discovery", label: "Discovery", icon: Search },
+  { to: "/app/analytics", label: "Analytics", icon: BarChart3 },
 ];
 
 export default function Sidebar() {
@@ -15,10 +15,10 @@ export default function Sidebar() {
 
   return (
     <aside className="flex h-screen w-60 flex-col border-r border-ink-100 bg-white">
-      <div className="flex items-center gap-2 px-5 py-5">
+      <Link to="/app" className="flex items-center gap-2 px-5 py-5">
         <Logomark />
         <span className="font-display text-lg font-semibold text-ink-900">LeadForge</span>
-      </div>
+      </Link>
 
       <nav className="flex-1 space-y-1 px-3">
         {NAV_ITEMS.map(({ to, label, icon: Icon, end }) => (
