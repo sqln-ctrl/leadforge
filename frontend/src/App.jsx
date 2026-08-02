@@ -9,13 +9,16 @@ import LeadDetail from "./pages/LeadDetail";
 import Discovery from "./pages/Discovery";
 import Analytics from "./pages/Analytics";
 import NotFound from "./pages/NotFound";
+import { Toaster } from "react-hot-toast";
 
 export default function App() {
   return (
-    <Routes>
-      <Route path="/" element={<Landing />} />
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
+     <>
+      <Toaster position="top-right" />
+      <Routes>
+        <Route path="/" element={<Landing />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
 
       <Route
         path="/app"
@@ -33,5 +36,6 @@ export default function App() {
 
       <Route path="*" element={<NotFound />} />
     </Routes>
+    </>
   );
 }

@@ -29,11 +29,9 @@ export function AuthProvider({ children }) {
   }
 
   async function register(payload) {
-    await authApi.register(payload);
-    // Registration doesn't log the user in automatically on the backend --
-    // send them to log in with their new credentials.
-    return login(payload.email, payload.password);
-  }
+  const { data } = await authApi.register(payload);
+  return data;
+}
 
   function logout() {
     localStorage.removeItem("leadforge_token");
