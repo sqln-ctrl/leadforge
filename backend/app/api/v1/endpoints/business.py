@@ -11,7 +11,7 @@ from app.services.business_service import (
 
 router = APIRouter(
     prefix="/businesses",
-    tags=["Businesses"]
+
 )
 
 
