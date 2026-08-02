@@ -1,35 +1,32 @@
-from sqlalchemy import Column, Integer, String, DateTime
+import enum
+import uuid
 from datetime import datetime
-from enum import Enum
+
+from sqlalchemy import Boolean, DateTime, Enum, String
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.sql import func
+
 from app.core.db import Base
 
-class UserRole(str, Enum):
-    ADMIN = "admin"
+
+class UserRole(str, enum.Enum):
+    ADMIN = "administrator"
     AGENCY_OWNER = "agency_owner"
-    USER = "user"
+    SALES_TEAM = "sales_team"
+    VIEWER = "viewer"
+
 
 class User(Base):
     __tablename__ = "users"
 
-    id = Column(Integer, primary_key=True, index=True)
-
-    name = Column(
-        String,
-        nullable=False
-    )
-
-    email = Column(
-        String,
-        unique=True,
-        nullable=False
-    )
-
-    password_hash = Column(
-        String,
-        nullable=False
-    )
-
-    created_at = Column(
-        DateTime,
-        default=datetime.utcnow
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    email: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
+    hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
+    full_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    role: Mapped[UserRole] = mapped_column(Enum(UserRole), default=UserRole.VIEWER, nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
