@@ -3,28 +3,27 @@ import axios from "axios";
 const API_BASE_URL =
   import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
 
-
 export const api = axios.create({
   baseURL: API_BASE_URL,
 });
 
+// Attach JWT token to every request
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem("leadforge_token");
 
-// Attach token to requests
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("leadforge_token");
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
 
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
 
-  return config;
-});
-
-
-// Handle expired token
+// Handle expired/invalid token
 api.interceptors.response.use(
   (response) => response,
-
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem("leadforge_token");
@@ -38,14 +37,10 @@ api.interceptors.response.use(
   }
 );
 
-
-
 export const authApi = {
-
-  // Login endpoint
+  // Login
   login: (email, password) => {
     const form = new URLSearchParams();
-
     form.append("username", email);
     form.append("password", password);
 
@@ -56,33 +51,35 @@ export const authApi = {
     });
   },
 
-
-  // Register endpoint
+  // Register
   register: (payload) => {
     return api.post("/auth/register", payload);
   },
 
-
-  // Current user
-  me: () => api.get("/auth/me"),
+  // Current logged-in user
+  me: () => {
+    return api.get("/auth/me");
+  },
 };
 
-
-
 export const leadsApi = {
+  // Get all businesses/leads
+  list: (params) => {
+    return api.get("/businesses", { params });
+  },
 
-  list: (params) =>
-    api.get("/businesses", { params }),
+  // Get one business
+  get: (id) => {
+    return api.get(`/businesses/${id}`);
+  },
 
+  // Update business status
+  updateStatus: (id, status) => {
+    return api.patch(`/businesses/${id}`, { status });
+  },
 
-  get: (id) =>
-    api.get(`/businesses/${id}`),
-
-
-  updateStatus: (id, status) =>
-    api.patch(`/businesses/${id}`, { status }),
-
-
-  addNote: (id, note) =>
-    api.post(`/businesses/${id}/notes`, { note }),
+  // Add a note
+  addNote: (id, note) => {
+    return api.post(`/businesses/${id}/notes`, { note });
+  },
 };

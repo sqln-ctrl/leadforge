@@ -4,6 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import Logomark from "../components/layout/Logomark";
 import Input from "../components/ui/Input";
 import Button from "../components/ui/Button";
+import toast from "react-hot-toast";
 
 export default function Login() {
   const { login } = useAuth();
@@ -18,6 +19,7 @@ export default function Login() {
     setSubmitting(true);
     try {
       await login(form.email, form.password);
+      toast.success("Login successful! Welcome back 🚀");
       navigate("/app");
     } catch (err) {
       setError(err.response?.data?.detail || "Couldn't log in. Check your email and password.");
