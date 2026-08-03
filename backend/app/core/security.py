@@ -1,4 +1,4 @@
-import uuid
+
 from datetime import datetime, timedelta, timezone
 
 from fastapi import Depends, HTTPException, status
@@ -11,7 +11,7 @@ from app.core.config import settings
 from app.core.db import get_db
 from app.models.user import User, UserRole
 
-# settings = get_settings()
+
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -58,12 +58,12 @@ def get_current_user(
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
-        user_id = uuid.UUID(decode_access_token(token))
+       user_id = int(decode_access_token(token))
     except (JWTError, ValueError):
-        raise credentials_exception
+       raise credentials_exception
 
     user = db.query(User).filter(User.id == user_id).first()
-    if user is None or not user.is_active:
+    if user is None :
         raise credentials_exception
     return user
 
