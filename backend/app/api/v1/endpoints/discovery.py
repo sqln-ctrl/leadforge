@@ -15,7 +15,7 @@ class DiscoveryRequest(BaseModel):
     city: str
     category: str
     country: str | None = None
-    limit: int = Field(default=10, ge=1, le=20)
+    limit: int = Field(default=20, ge=1, le=20)
 
 
 class DiscoveryResult(BaseModel):
