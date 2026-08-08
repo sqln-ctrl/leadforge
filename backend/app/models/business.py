@@ -22,6 +22,8 @@ class Business(Base):
 
     phone = Column(String)
 
+    email = Column(String)
+
     source = Column(String)
 
     created_at = Column(
