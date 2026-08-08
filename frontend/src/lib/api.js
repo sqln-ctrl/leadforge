@@ -1,3 +1,4 @@
+
 import axios from "axios";
 
 const API_BASE_URL =
@@ -37,10 +38,15 @@ api.interceptors.response.use(
   }
 );
 
+// =========================
+// AUTH API
+// =========================
+
 export const authApi = {
   // Login
   login: (email, password) => {
     const form = new URLSearchParams();
+
     form.append("username", email);
     form.append("password", password);
 
@@ -62,10 +68,14 @@ export const authApi = {
   },
 };
 
+// =========================
+// BUSINESS / LEADS API
+// =========================
+
 export const leadsApi = {
-  // Get all businesses/leads
+  // Get all businesses
   list: (params) => {
-    return api.get("/businesses", { params });
+    return api.get("/businesses/", { params });
   },
 
   // Get one business
@@ -81,5 +91,16 @@ export const leadsApi = {
   // Add a note
   addNote: (id, note) => {
     return api.post(`/businesses/${id}/notes`, { note });
+  },
+};
+
+// =========================
+// DISCOVERY API
+// =========================
+
+export const discoveryApi = {
+  // Search businesses using Geoapify
+  search: (data) => {
+    return api.post("/discovery/search", data);
   },
 };
