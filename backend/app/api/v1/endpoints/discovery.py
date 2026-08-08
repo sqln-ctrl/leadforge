@@ -5,7 +5,8 @@ from sqlalchemy.orm import Session
 from app.core.db import get_db
 from app.schemas.business import BusinessCreate, BusinessResponse
 from app.services import business_service
-from app.services.overpass_service import OverpassError, search_places
+from app.services.geoapify import search_places, GeoapifyError
+
 
 router = APIRouter(prefix="/discovery")
 
@@ -22,18 +23,45 @@ class DiscoveryResult(BaseModel):
     skipped_existing: int
 
 
-@router.post("/search", response_model=DiscoveryResult)
-def run_discovery(payload: DiscoveryRequest, db: Session = Depends(get_db)) -> DiscoveryResult:
-    try:
-        found = search_places(city=payload.city, category=payload.category, country=payload.country)
-    except OverpassError as exc:
-        raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(exc)) from exc
+@router.post(
+    "/search",
+    response_model=DiscoveryResult,
+)
+def run_discovery(
+    payload: DiscoveryRequest,
+    db: Session = Depends(get_db),
+) -> DiscoveryResult:
 
-    created: list = []
+    try:
+        found = search_places(
+            city=payload.city,
+            category=payload.category,
+            country=payload.country,
+            limit=payload.limit,
+        )
+
+    except GeoapifyError as exc:
+        print("GEOAPIFY ERROR:", exc)
+
+        raise HTTPException(
+            status_code=502,
+            detail=str(exc),
+        ) from exc
+
+    created = []
     skipped = 0
 
-    for raw in found[: payload.limit]:
-        existing = business_service.find_existing_business(db, raw["name"], raw.get("location"))
+    for raw in found:
+
+        if not raw.get("name"):
+            continue
+
+        existing = business_service.find_existing_business(
+            db,
+            raw["name"],
+            raw.get("location"),
+        )
+
         if existing:
             skipped += 1
             continue
@@ -49,6 +77,10 @@ def run_discovery(payload: DiscoveryRequest, db: Session = Depends(get_db)) -> D
                 source=raw.get("source"),
             ),
         )
+
         created.append(business)
 
-    return DiscoveryResult(created=created, skipped_existing=skipped)
+    return DiscoveryResult(
+        created=created,
+        skipped_existing=skipped,
+    )
