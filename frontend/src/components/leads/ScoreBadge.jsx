@@ -1,9 +1,5 @@
 import clsx from "clsx";
-import { scoreTemperature } from "../../lib/mockData";
 
-// The signature element: lead scores read as "heat" (cold -> hot), tying the
-// scoring system back to the forge/heat metaphor in the product name. A high
-// score means a business needs the agency's help more -- i.e. it's a "hot" lead.
 const HEAT_STYLES = {
   hot: "bg-forge-50 text-forge-600 ring-1 ring-inset ring-forge-200",
   warm: "bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200",
@@ -11,7 +7,31 @@ const HEAT_STYLES = {
   cold: "bg-blue-50 text-blue-600 ring-1 ring-inset ring-blue-200",
 };
 
+function scoreTemperature(score) {
+  if (score >= 80) return "hot";
+  if (score >= 55) return "warm";
+  if (score >= 30) return "cool";
+  return "cold";
+}
+
+// Score is undefined/null until Phase 5 (Lead Scoring) exists on the
+// backend -- render an honest "not scored" state instead of a fake 0,
+// which would look like a real (very cold) score.
 export default function ScoreBadge({ score, className }) {
+  if (score === null || score === undefined) {
+    return (
+      <span
+        className={clsx(
+          "inline-flex items-center gap-1 rounded-md bg-ink-50 px-2 py-0.5 font-mono text-xs text-ink-300 ring-1 ring-inset ring-ink-100",
+          className
+        )}
+        title="Lead scoring isn't built yet"
+      >
+        --
+      </span>
+    );
+  }
+
   const temp = scoreTemperature(score);
   return (
     <span

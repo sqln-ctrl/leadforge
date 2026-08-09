@@ -1,5 +1,4 @@
-
-import axios from "axios";
+﻿import axios from "axios";
 
 const API_BASE_URL =
   import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
@@ -89,8 +88,8 @@ export const leadsApi = {
   },
 
   // Add a note
-  addNote: (id, note) => {
-    return api.post(`/businesses/${id}/notes`, { note });
+  addNote: (id, text) => {
+    return api.post(`/businesses/${id}/notes`, { text });
   },
 };
 

@@ -1,38 +1,51 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Search } from "lucide-react";
-import { mockLeads, STATUSES } from "../lib/mockData";
+import { leadsApi } from "../lib/api";
 import ScoreBadge from "../components/leads/ScoreBadge";
 import StatusBadge from "../components/leads/StatusBadge";
 
+const STATUSES = ["new", "contacted", "qualified", "closed"];
+
 export default function Leads() {
+  const [leads, setLeads] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
 
-  const filtered = useMemo(() => {
-    return mockLeads
-      .filter((l) => statusFilter === "All" || l.status === statusFilter)
-      .filter((l) => l.name.toLowerCase().includes(query.toLowerCase()))
-      .sort((a, b) => b.score - a.score);
-  }, [query, statusFilter]);
+  useEffect(() => {
+    leadsApi
+      .list()
+      .then((res) => setLeads(res.data))
+      .catch(() => setError("Couldn't load leads. Is the backend running?"))
+      .finally(() => setLoading(false));
+  }, []);
 
-  const avgScore = Math.round(mockLeads.reduce((sum, l) => sum + l.score, 0) / mockLeads.length);
-  const hotCount = mockLeads.filter((l) => l.score >= 80).length;
+  const filtered = useMemo(() => {
+    return leads
+      .filter((l) => statusFilter === "All" || l.status === statusFilter)
+      .filter((l) => l.name.toLowerCase().includes(query.toLowerCase()));
+    // Note: no score-based sort here (unlike the old mock version) --
+    // there's no score field until Phase 5 exists on the backend.
+  }, [query, statusFilter, leads]);
+
+  if (loading) {
+    return <p className="text-sm text-ink-400">Loading leads...</p>;
+  }
+
+  if (error) {
+    return <p className="text-sm text-red-600">{error}</p>;
+  }
 
   return (
     <div>
-      <header className="mb-6 flex items-start justify-between">
-        <div>
-          <h1 className="font-display text-2xl font-semibold text-ink-900">Leads</h1>
-          <p className="mt-1 text-sm text-ink-400">Businesses discovered, scored, and ranked by opportunity.</p>
-        </div>
+      <header className="mb-6">
+        <h1 className="font-display text-2xl font-semibold text-ink-900">Leads</h1>
+        <p className="mt-1 text-sm text-ink-400">
+          {leads.length} business{leads.length === 1 ? "" : "es"} discovered so far.
+        </p>
       </header>
-
-      <div className="mb-6 grid grid-cols-3 gap-4">
-        <StatCard label="Total leads" value={mockLeads.length} />
-        <StatCard label="Avg. score" value={avgScore} />
-        <StatCard label="Hot leads" value={hotCount} accent />
-      </div>
 
       <div className="mb-4 flex items-center gap-3">
         <div className="relative flex-1">
@@ -47,11 +60,13 @@ export default function Leads() {
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="rounded-lg border border-ink-200 bg-white px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-forge-500"
+          className="rounded-lg border border-ink-200 bg-white px-3 py-2 text-sm capitalize focus:outline-none focus-visible:ring-2 focus-visible:ring-forge-500"
         >
           <option>All</option>
           {STATUSES.map((s) => (
-            <option key={s}>{s}</option>
+            <option key={s} value={s} className="capitalize">
+              {s}
+            </option>
           ))}
         </select>
       </div>
@@ -61,8 +76,8 @@ export default function Leads() {
           <thead className="border-b border-ink-100 text-xs uppercase tracking-wide text-ink-400">
             <tr>
               <th className="px-5 py-3 font-medium">Business</th>
-              <th className="px-5 py-3 font-medium">Category</th>
-              <th className="px-5 py-3 font-medium">Why it's a lead</th>
+              <th className="px-5 py-3 font-medium">Industry</th>
+              <th className="px-5 py-3 font-medium">Source</th>
               <th className="px-5 py-3 font-medium">Status</th>
               <th className="px-5 py-3 font-medium">Score</th>
             </tr>
@@ -71,13 +86,13 @@ export default function Leads() {
             {filtered.map((lead) => (
               <tr key={lead.id} className="hover:bg-ink-50/60">
                 <td className="px-5 py-3">
-                  <Link to={`/leads/${lead.id}`} className="font-medium text-ink-800 hover:text-forge-600">
+                  <Link to={`/app/leads/${lead.id}`} className="font-medium text-ink-800 hover:text-forge-600">
                     {lead.name}
                   </Link>
-                  <p className="text-xs text-ink-400">{lead.city}</p>
+                  <p className="text-xs text-ink-400">{lead.location || "No location on file"}</p>
                 </td>
-                <td className="px-5 py-3 text-ink-500">{lead.category}</td>
-                <td className="px-5 py-3 text-ink-500">{lead.reason}</td>
+                <td className="px-5 py-3 text-ink-500">{lead.industry || "--"}</td>
+                <td className="px-5 py-3 text-ink-500 capitalize">{lead.source || "manual"}</td>
                 <td className="px-5 py-3">
                   <StatusBadge status={lead.status} />
                 </td>
@@ -89,29 +104,15 @@ export default function Leads() {
             {filtered.length === 0 && (
               <tr>
                 <td colSpan={5} className="px-5 py-10 text-center text-sm text-ink-400">
-                  No leads match your filters.
+                  {leads.length === 0
+                    ? "No leads yet -- run a discovery search to find some."
+                    : "No leads match your filters."}
                 </td>
               </tr>
             )}
           </tbody>
         </table>
       </div>
-
-      <p className="mt-4 text-xs text-ink-300">
-        Showing placeholder data. This list will connect to <code className="font-mono">/businesses</code> once
-        Phase 3 (Lead Management) endpoints are built on the backend.
-      </p>
-    </div>
-  );
-}
-
-function StatCard({ label, value, accent }) {
-  return (
-    <div className="rounded-xl border border-ink-100 bg-white p-4 shadow-card">
-      <p className="text-xs text-ink-400">{label}</p>
-      <p className={`mt-1 font-display text-2xl font-semibold ${accent ? "text-forge-600" : "text-ink-900"}`}>
-        {value}
-      </p>
     </div>
   );
 }
