@@ -3,6 +3,17 @@ from datetime import datetime
 
 from app.core.db import Base
 
+import enum
+from sqlalchemy import Enum  # add to your existing import line
+
+class LeadStatus(str, enum.Enum):
+    NEW = "new"
+    CONTACTED = "contacted"
+    QUALIFIED = "qualified"
+    CLOSED = "closed"
+
+# inside Business, add:
+status = Column(Enum(LeadStatus), default=LeadStatus.NEW, nullable=False)
 
 class Business(Base):
     __tablename__ = "businesses"

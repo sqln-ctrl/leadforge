@@ -2,7 +2,34 @@ from sqlalchemy.orm import Session
 
 from app.models.business import Business
 from app.schemas.business import BusinessCreate
+from sqlalchemy.orm import Session, joinedload
+from app.models.business import Business, LeadStatus
+from app.models.note import Note
+from app.schemas.business import BusinessCreate
 
+# ...keep create_business, get_businesses, find_existing_business as-is, add:
+
+def get_business(db: Session, business_id: int) -> Business | None:
+    return db.query(Business).options(joinedload(Business.notes)).filter(Business.id == business_id).first()
+
+def update_business_status(db: Session, business_id: int, status: LeadStatus) -> Business | None:
+    business = db.query(Business).filter(Business.id == business_id).first()
+    if business is None:
+        return None
+    business.status = status
+    db.commit()
+    db.refresh(business)
+    return business
+
+def add_note(db: Session, business_id: int, text: str) -> Note | None:
+    business = db.query(Business).filter(Business.id == business_id).first()
+    if business is None:
+        return None
+    note = Note(business_id=business_id, text=text)
+    db.add(note)
+    db.commit()
+    db.refresh(note)
+    return note
 
 def create_business(db: Session, business: BusinessCreate) -> Business:
     db_business = Business(**business.model_dump())
