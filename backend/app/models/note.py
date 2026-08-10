@@ -10,8 +10,28 @@ class Note(Base):
     __tablename__ = "notes"
 
     id = Column(Integer, primary_key=True)
-    business_id = Column(Integer, ForeignKey("businesses.id", ondelete="CASCADE"), nullable=False, index=True)
-    text = Column(String, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
 
-    business = relationship("Business", backref="notes")
+    business_id = Column(
+        Integer,
+        ForeignKey(
+            "businesses.id",
+            ondelete="CASCADE"
+        ),
+        nullable=False,
+        index=True
+    )
+
+    text = Column(
+        String,
+        nullable=False
+    )
+
+    created_at = Column(
+        DateTime,
+        default=datetime.utcnow
+    )
+
+    business = relationship(
+        "Business",
+        back_populates="notes"
+    )

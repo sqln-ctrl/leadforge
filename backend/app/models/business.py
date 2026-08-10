@@ -1,10 +1,11 @@
-from sqlalchemy import Column, Integer, String, DateTime
+import enum
 from datetime import datetime
+
+from sqlalchemy import Column, Integer, String, DateTime, Enum
+from sqlalchemy.orm import relationship
 
 from app.core.db import Base
 
-import enum
-from sqlalchemy import Enum  # add to your existing import line
 
 class LeadStatus(str, enum.Enum):
     NEW = "new"
@@ -12,8 +13,6 @@ class LeadStatus(str, enum.Enum):
     QUALIFIED = "qualified"
     CLOSED = "closed"
 
-# inside Business, add:
-status = Column(Enum(LeadStatus), default=LeadStatus.NEW, nullable=False)
 
 class Business(Base):
     __tablename__ = "businesses"
@@ -26,18 +25,25 @@ class Business(Base):
     )
 
     website = Column(String)
-
     industry = Column(String)
-
     location = Column(String)
-
     phone = Column(String)
-
     email = Column(String)
-
     source = Column(String)
+
+    status = Column(
+        Enum(LeadStatus),
+        default=LeadStatus.NEW,
+        nullable=False
+    )
 
     created_at = Column(
         DateTime,
         default=datetime.utcnow
+    )
+
+    notes = relationship(
+        "Note",
+        back_populates="business",
+        cascade="all, delete-orphan"
     )
