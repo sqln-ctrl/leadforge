@@ -5,30 +5,32 @@ import { leadsApi } from "../lib/api";
 import ScoreBadge from "../components/leads/ScoreBadge";
 import StatusBadge from "../components/leads/StatusBadge";
 
-const STATUSES = ["new", "contacted", "qualified", "closed"];
-
 export default function Leads() {
   const [leads, setLeads] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("All");
 
   useEffect(() => {
     leadsApi
       .list()
       .then((res) => setLeads(res.data))
-      .catch(() => setError("Couldn't load leads. Is the backend running?"))
+      .catch((err) => {
+        console.error(err);
+        setError("Couldn't load leads. Is the backend running?");
+      })
       .finally(() => setLoading(false));
   }, []);
 
+  // This page is scoped to qualified leads only -- freshly discovered
+  // businesses live on the Discovery page until someone marks them
+  // "qualified" from the lead detail view.
+const isQualified = (lead) => Boolean(lead.phone || lead.email || lead.website);
+const qualifiedLeads = useMemo(() => leads.filter(isQualified), [leads]);
+
   const filtered = useMemo(() => {
-    return leads
-      .filter((l) => statusFilter === "All" || l.status === statusFilter)
-      .filter((l) => l.name.toLowerCase().includes(query.toLowerCase()));
-    // Note: no score-based sort here (unlike the old mock version) --
-    // there's no score field until Phase 5 exists on the backend.
-  }, [query, statusFilter, leads]);
+    return qualifiedLeads.filter((l) => l.name.toLowerCase().includes(query.toLowerCase()));
+  }, [query, qualifiedLeads]);
 
   if (loading) {
     return <p className="text-sm text-ink-400">Loading leads...</p>;
@@ -43,32 +45,20 @@ export default function Leads() {
       <header className="mb-6">
         <h1 className="font-display text-2xl font-semibold text-ink-900">Leads</h1>
         <p className="mt-1 text-sm text-ink-400">
-          {leads.length} business{leads.length === 1 ? "" : "es"} discovered so far.
+          {qualifiedLeads.length} qualified lead{qualifiedLeads.length === 1 ? "" : "s"} ready for outreach.
         </p>
       </header>
 
-      <div className="mb-4 flex items-center gap-3">
-        <div className="relative flex-1">
+      <div className="mb-4">
+        <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-300" />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search leads by name..."
+            placeholder="Search qualified leads by name..."
             className="w-full rounded-lg border border-ink-200 bg-white py-2 pl-9 pr-3 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-forge-500"
           />
         </div>
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="rounded-lg border border-ink-200 bg-white px-3 py-2 text-sm capitalize focus:outline-none focus-visible:ring-2 focus-visible:ring-forge-500"
-        >
-          <option>All</option>
-          {STATUSES.map((s) => (
-            <option key={s} value={s} className="capitalize">
-              {s}
-            </option>
-          ))}
-        </select>
       </div>
 
       <div className="overflow-hidden rounded-xl border border-ink-100 bg-white shadow-card">
@@ -104,9 +94,9 @@ export default function Leads() {
             {filtered.length === 0 && (
               <tr>
                 <td colSpan={5} className="px-5 py-10 text-center text-sm text-ink-400">
-                  {leads.length === 0
-                    ? "No leads yet -- run a discovery search to find some."
-                    : "No leads match your filters."}
+                  {qualifiedLeads.length === 0
+                    ? 'No qualified leads yet -- mark a discovered business as "Qualified" from its detail page.'
+                    : "No qualified leads match your search."}
                 </td>
               </tr>
             )}

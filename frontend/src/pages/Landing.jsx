@@ -55,8 +55,8 @@ function Nav() {
           <Logomark className="h-6 w-6" tone="light" />
           <span className="font-display text-lg font-semibold text-white">LeadForge</span>
         </Link>
-        <div className="flex items-center gap-3">
-          <Link to="/login" className="text-sm font-medium text-ink-200 hover:text-white">
+        <div className="flex items-center gap-5">
+          <Link to="/login" className="rounded-lg  px-5 py-2 bg-black text-sm font-medium text-ink-200 hover:text-white">
             Log in
           </Link>
           <Link

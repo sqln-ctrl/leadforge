@@ -103,3 +103,7 @@ export const discoveryApi = {
     return api.post("/discovery/search", data);
   },
 };
+
+export const leadApi = {
+  getById: (id) => api.get(`/leads/${id}`),
+};
