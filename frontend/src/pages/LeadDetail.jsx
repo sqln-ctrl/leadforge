@@ -6,20 +6,12 @@ import {
   Mail,
   Phone,
   Globe,
-  CheckCircle,
 } from "lucide-react";
 
 import { leadsApi } from "../lib/api";
 import ScoreBadge from "../components/leads/ScoreBadge";
 import StatusBadge from "../components/leads/StatusBadge";
 import Button from "../components/ui/Button";
-
-const STATUSES = [
-  "new",
-  "contacted",
-  "qualified",
-  "closed",
-];
 
 export default function LeadDetail() {
   const { id } = useParams();
@@ -29,9 +21,7 @@ export default function LeadDetail() {
   const [error, setError] = useState("");
 
   const [draft, setDraft] = useState("");
-  const [savingStatus, setSavingStatus] = useState(false);
   const [addingNote, setAddingNote] = useState(false);
-  const [successMessage, setSuccessMessage] = useState("");
 
   // --------------------------------------------------
   // Load lead
@@ -67,62 +57,6 @@ export default function LeadDetail() {
   }, [id]);
 
   // --------------------------------------------------
-  // Update status
-  // --------------------------------------------------
-
-  async function handleStatusChange(newStatus) {
-    if (!lead || savingStatus) return;
-
-    const previousStatus = lead.status;
-
-    // Clear previous success message
-    setSuccessMessage("");
-
-    // Optimistic update
-    setLead((prev) => ({
-      ...prev,
-      status: newStatus,
-    }));
-
-    setSavingStatus(true);
-
-    try {
-      const { data } = await leadsApi.updateStatus(
-        id,
-        newStatus
-      );
-
-      // Use backend response as the source of truth
-      setLead((prev) => ({
-        ...prev,
-        ...data,
-        notes: prev.notes || [],
-      }));
-
-      if (newStatus === "qualified") {
-        setSuccessMessage(
-          "Lead qualified successfully. It is now available on the Leads page."
-        );
-      }
-    } catch (err) {
-      console.error("Failed to update status:", err);
-
-      // Revert optimistic update
-      setLead((prev) => ({
-        ...prev,
-        status: previousStatus,
-      }));
-
-      setError(
-        err.response?.data?.detail ||
-          "Failed to update lead status."
-      );
-    } finally {
-      setSavingStatus(false);
-    }
-  }
-
-  // --------------------------------------------------
   // Add note
   // --------------------------------------------------
 
@@ -132,11 +66,10 @@ export default function LeadDetail() {
     setAddingNote(true);
 
     try {
-      const { data: newNote } =
-        await leadsApi.addNote(
-          id,
-          draft.trim()
-        );
+      const { data: newNote } = await leadsApi.addNote(
+        id,
+        draft.trim()
+      );
 
       setLead((prev) => ({
         ...prev,
@@ -204,9 +137,7 @@ export default function LeadDetail() {
   return (
     <div className="space-y-6">
 
-      {/* ---------------------------------------------- */}
       {/* Back */}
-      {/* ---------------------------------------------- */}
 
       <Link
         to="/app"
@@ -216,9 +147,7 @@ export default function LeadDetail() {
         Back to leads
       </Link>
 
-      {/* ---------------------------------------------- */}
       {/* Error message */}
-      {/* ---------------------------------------------- */}
 
       {error && (
         <div className="rounded-lg border border-red-100 bg-red-50 px-4 py-3">
@@ -228,23 +157,7 @@ export default function LeadDetail() {
         </div>
       )}
 
-      {/* ---------------------------------------------- */}
-      {/* Success message */}
-      {/* ---------------------------------------------- */}
-
-      {successMessage && (
-        <div className="flex items-center gap-2 rounded-lg border border-green-100 bg-green-50 px-4 py-3">
-          <CheckCircle className="h-4 w-4 text-green-600" />
-
-          <p className="text-sm text-green-700">
-            {successMessage}
-          </p>
-        </div>
-      )}
-
-      {/* ---------------------------------------------- */}
       {/* Header */}
-      {/* ---------------------------------------------- */}
 
       <div className="mb-6 flex items-start justify-between">
         <div>
@@ -260,26 +173,20 @@ export default function LeadDetail() {
         </div>
 
         <ScoreBadge
-          score={lead.score}
+          score={lead.lead_score ?? 0}
           className="text-sm"
         />
       </div>
 
-      {/* ---------------------------------------------- */}
       {/* Main content */}
-      {/* ---------------------------------------------- */}
 
       <div className="grid grid-cols-3 gap-6">
 
-        {/* ============================================ */}
         {/* LEFT COLUMN */}
-        {/* ============================================ */}
 
         <div className="col-span-2 space-y-6">
 
-          {/* ------------------------------------------ */}
           {/* Notes */}
-          {/* ------------------------------------------ */}
 
           <section className="rounded-xl border border-ink-100 bg-white p-5 shadow-card">
 
@@ -349,9 +256,7 @@ export default function LeadDetail() {
             </ul>
           </section>
 
-          {/* ------------------------------------------ */}
           {/* Lead Information */}
-          {/* ------------------------------------------ */}
 
           <section className="rounded-xl border border-ink-100 bg-white p-5 shadow-card">
 
@@ -402,15 +307,50 @@ export default function LeadDetail() {
 
         </div>
 
-        {/* ============================================ */}
         {/* RIGHT COLUMN */}
-        {/* ============================================ */}
 
         <div className="space-y-6">
 
-          {/* ------------------------------------------ */}
-          {/* Qualification / Status */}
-          {/* ------------------------------------------ */}
+          {/* Automatic Qualification */}
+
+          <section className="rounded-xl border border-ink-100 bg-white p-5 shadow-card">
+
+            <h2 className="mb-3 text-sm font-semibold text-ink-800">
+              Qualification
+            </h2>
+
+            <div className="mb-4">
+              <ScoreBadge
+                score={lead.lead_score ?? 0}
+              />
+            </div>
+
+            <div className="rounded-lg bg-ink-50 px-3 py-3">
+
+              <p className="text-xs font-medium uppercase tracking-wide text-ink-400">
+                Qualification
+              </p>
+
+              <p className="mt-1 text-sm font-semibold capitalize text-ink-800">
+                {(lead.qualification || "unqualified")
+                  .replaceAll("_", " ")}
+              </p>
+
+            </div>
+
+            <div className="mt-4">
+
+              <p className="text-xs text-ink-400">
+                Qualification is calculated automatically
+                by the backend based on the available
+                business information.
+              </p>
+
+            </div>
+
+          </section>
+
+          {/* Status */}
 
           <section className="rounded-xl border border-ink-100 bg-white p-5 shadow-card">
 
@@ -418,68 +358,18 @@ export default function LeadDetail() {
               Lead Status
             </h2>
 
-            <div className="mb-4">
-              <StatusBadge
-                status={lead.status}
-              />
-            </div>
+            <StatusBadge
+              status={lead.status}
+            />
 
-            {/* Main qualification button */}
-            {lead.status !== "qualified" && (
-              <Button
-                onClick={() =>
-                  handleStatusChange(
-                    "qualified"
-                  )
-                }
-                disabled={savingStatus}
-                className="mb-3 w-full"
-              >
-                <CheckCircle className="h-4 w-4" />
-
-                {savingStatus
-                  ? "Updating..."
-                  : "Mark as Qualified"}
-              </Button>
-            )}
-
-            {/* Qualified message */}
-            {lead.status === "qualified" && (
-              <div className="mb-3 flex items-center gap-2 rounded-lg bg-green-50 px-3 py-2">
-                <CheckCircle className="h-4 w-4 text-green-600" />
-
-                <span className="text-sm font-medium text-green-700">
-                  Qualified Lead
-                </span>
-              </div>
-            )}
-
-            {/* Status selector */}
-            <select
-              value={lead.status || "new"}
-              onChange={(e) =>
-                handleStatusChange(
-                  e.target.value
-                )
-              }
-              disabled={savingStatus}
-              className="w-full rounded-lg border border-ink-200 px-3 py-2 text-sm capitalize focus:outline-none focus-visible:ring-2 focus-visible:ring-forge-500"
-            >
-              {STATUSES.map((status) => (
-                <option
-                  key={status}
-                  value={status}
-                >
-                  {status}
-                </option>
-              ))}
-            </select>
+            <p className="mt-3 text-xs text-ink-400">
+              Status is managed automatically by the
+              qualification process.
+            </p>
 
           </section>
 
-          {/* ------------------------------------------ */}
           {/* Contact */}
-          {/* ------------------------------------------ */}
 
           <section className="rounded-xl border border-ink-100 bg-white p-5 shadow-card">
 
@@ -490,6 +380,7 @@ export default function LeadDetail() {
             <ul className="space-y-3 text-sm text-ink-600">
 
               {/* Email */}
+
               <li className="flex items-start gap-2">
 
                 <Mail className="mt-0.5 h-4 w-4 shrink-0 text-ink-300" />
@@ -510,6 +401,7 @@ export default function LeadDetail() {
               </li>
 
               {/* Phone */}
+
               <li className="flex items-start gap-2">
 
                 <Phone className="mt-0.5 h-4 w-4 shrink-0 text-ink-300" />
@@ -530,6 +422,7 @@ export default function LeadDetail() {
               </li>
 
               {/* Website */}
+
               <li className="flex items-start gap-2">
 
                 <Globe className="mt-0.5 h-4 w-4 shrink-0 text-ink-300" />
@@ -537,12 +430,8 @@ export default function LeadDetail() {
                 {lead.website ? (
                   <a
                     href={
-                      lead.website.startsWith(
-                        "http://"
-                      ) ||
-                      lead.website.startsWith(
-                        "https://"
-                      )
+                      lead.website.startsWith("http://") ||
+                      lead.website.startsWith("https://")
                         ? lead.website
                         : `https://${lead.website}`
                     }
@@ -582,4 +471,3 @@ function Info({ label, value }) {
     </div>
   );
 }
-
