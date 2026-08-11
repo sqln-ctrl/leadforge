@@ -19,11 +19,7 @@ class Business(Base):
 
     id = Column(Integer, primary_key=True)
 
-    name = Column(
-        String,
-        nullable=False
-    )
-
+    name = Column(String, nullable=False)
     website = Column(String)
     industry = Column(String)
     location = Column(String)
@@ -34,6 +30,18 @@ class Business(Base):
     status = Column(
         Enum(LeadStatus),
         default=LeadStatus.NEW,
+        nullable=False
+    )
+
+    lead_score = Column(
+        Integer,
+        default=0,
+        nullable=False
+    )
+
+    qualification = Column(
+        String,
+        default="unqualified",
         nullable=False
     )
 

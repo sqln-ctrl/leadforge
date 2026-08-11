@@ -23,6 +23,9 @@ class BusinessResponse(BaseModel):
     phone: str | None = None
     email: str | None = None
     source: str | None = None
+    status: LeadStatus
+    lead_score: int
+    qualification: str
 
 
 # add `status: LeadStatus` field to BusinessResponse
