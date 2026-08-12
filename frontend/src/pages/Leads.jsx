@@ -1,12 +1,10 @@
-
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Search, Download } from "lucide-react";
+import { Search, Download, Trash2 } from "lucide-react";
 import * as XLSX from "xlsx";
 
 import { leadsApi } from "../lib/api";
 import ScoreBadge from "../components/leads/ScoreBadge";
-import StatusBadge from "../components/leads/StatusBadge";
 import Button from "../components/ui/Button";
 
 export default function Leads() {
@@ -14,6 +12,7 @@ export default function Leads() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
+  const [deletingId, setDeletingId] = useState(null);
 
   // --------------------------------------------------
   // Load leads
@@ -26,7 +25,6 @@ export default function Leads() {
         setError("");
 
         const res = await leadsApi.list();
-
         setLeads(res.data);
       } catch (err) {
         console.error("Failed to load leads:", err);
@@ -70,6 +68,41 @@ export default function Leads() {
   }, [query, qualifiedLeads]);
 
   // --------------------------------------------------
+  // Delete lead
+  // --------------------------------------------------
+
+  async function handleDelete(lead) {
+    if (deletingId) return;
+
+    const confirmed = window.confirm(
+      `Are you sure you want to delete "${lead.name}"?`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setDeletingId(lead.id);
+      setError("");
+
+      await leadsApi.delete(lead.id);
+
+      // Remove from local state immediately
+      setLeads((prev) =>
+        prev.filter((item) => item.id !== lead.id)
+      );
+    } catch (err) {
+      console.error("Failed to delete lead:", err);
+
+      setError(
+        err.response?.data?.detail ||
+          "Failed to delete lead."
+      );
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
+  // --------------------------------------------------
   // Export to Excel
   // --------------------------------------------------
 
@@ -94,42 +127,36 @@ export default function Leads() {
         : "",
     }));
 
-    // Create worksheet
     const worksheet = XLSX.utils.json_to_sheet(exportData);
 
-    // Set column widths
     worksheet["!cols"] = [
-      { wch: 28 }, // Business Name
-      { wch: 20 }, // Industry
-      { wch: 25 }, // Location
-      { wch: 35 }, // Website
-      { wch: 18 }, // Phone
-      { wch: 30 }, // Email
-      { wch: 15 }, // Source
-      { wch: 12 }, // Lead Score
-      { wch: 18 }, // Qualification
-      { wch: 15 }, // Status
-      { wch: 15 }, // Created Date
+      { wch: 28 },
+      { wch: 20 },
+      { wch: 25 },
+      { wch: 35 },
+      { wch: 18 },
+      { wch: 30 },
+      { wch: 15 },
+      { wch: 12 },
+      { wch: 18 },
+      { wch: 15 },
+      { wch: 15 },
     ];
 
-    // Create workbook
     const workbook = XLSX.utils.book_new();
 
-    // Add worksheet
     XLSX.utils.book_append_sheet(
       workbook,
       worksheet,
       "Qualified Leads"
     );
 
-    // Generate filename
     const date = new Date()
       .toISOString()
       .split("T")[0];
 
     const filename = `leadforge-qualified-leads-${date}.xlsx`;
 
-    // Download
     XLSX.writeFile(workbook, filename);
   }
 
@@ -151,7 +178,7 @@ export default function Leads() {
   // Error
   // --------------------------------------------------
 
-  if (error) {
+  if (error && leads.length === 0) {
     return (
       <div className="rounded-lg border border-red-200 bg-red-50 p-4">
         <p className="text-sm text-red-600">
@@ -166,7 +193,6 @@ export default function Leads() {
       {/* Header */}
 
       <header className="mb-6 flex items-start justify-between">
-
         <div>
           <h1 className="font-display text-2xl font-semibold text-ink-900">
             Qualified Leads
@@ -189,39 +215,40 @@ export default function Leads() {
           <Download className="h-4 w-4" />
           Export to Excel
         </Button>
-
       </header>
+
+      {/* Error */}
+
+      {error && (
+        <div className="mb-4 rounded-lg border border-red-100 bg-red-50 px-4 py-3">
+          <p className="text-sm text-red-600">
+            {error}
+          </p>
+        </div>
+      )}
 
       {/* Search */}
 
       <div className="mb-4">
         <div className="relative">
-
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-300" />
 
           <input
             type="text"
             value={query}
-            onChange={(e) =>
-              setQuery(e.target.value)
-            }
+            onChange={(e) => setQuery(e.target.value)}
             placeholder="Search qualified leads by name..."
             className="w-full rounded-lg border border-ink-200 bg-white py-2 pl-9 pr-3 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-forge-500"
           />
-
         </div>
       </div>
 
       {/* Leads Table */}
 
       <div className="overflow-hidden rounded-xl border border-ink-100 bg-white shadow-card">
-
         <table className="w-full text-left text-sm">
-
           <thead className="border-b border-ink-100 text-xs uppercase tracking-wide text-ink-400">
-
             <tr>
-
               <th className="px-5 py-3 font-medium">
                 Business
               </th>
@@ -242,23 +269,21 @@ export default function Leads() {
                 Score
               </th>
 
+              <th className="w-16 px-3 py-3 text-center font-medium">
+                {/* Delete column */}
+              </th>
             </tr>
-
           </thead>
 
           <tbody className="divide-y divide-ink-50">
-
             {filtered.map((lead) => (
-
               <tr
                 key={lead.id}
                 className="hover:bg-ink-50/60"
               >
-
                 {/* Business */}
 
                 <td className="px-5 py-3">
-
                   <Link
                     to={`/app/leads/${lead.id}`}
                     className="font-medium text-ink-800 hover:text-forge-600"
@@ -270,7 +295,6 @@ export default function Leads() {
                     {lead.location ||
                       "No location on file"}
                   </p>
-
                 </td>
 
                 {/* Industry */}
@@ -288,56 +312,55 @@ export default function Leads() {
                 {/* Qualification */}
 
                 <td className="px-5 py-3">
-
                   <span className="inline-flex rounded-full bg-green-50 px-2.5 py-1 text-xs font-medium capitalize text-green-700">
                     {(lead.qualification ||
                       "qualified"
                     ).replaceAll("_", " ")}
                   </span>
-
                 </td>
 
                 {/* Score */}
 
                 <td className="px-5 py-3">
-
                   <ScoreBadge
                     score={lead.lead_score ?? 0}
                   />
-
                 </td>
 
-              </tr>
+                {/* Delete */}
 
+                <td className="px-3 py-3 text-center">
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(lead)}
+                    disabled={deletingId === lead.id}
+                    title="Delete lead"
+                    aria-label={`Delete ${lead.name}`}
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink-300 transition hover:bg-red-50 hover:text-red-500 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </td>
+              </tr>
             ))}
 
             {/* Empty State */}
 
             {filtered.length === 0 && (
-
               <tr>
-
                 <td
-                  colSpan={5}
+                  colSpan={6}
                   className="px-5 py-10 text-center text-sm text-ink-400"
                 >
-
                   {qualifiedLeads.length === 0
                     ? "No automatically qualified leads yet. Run a discovery search to find businesses."
                     : "No qualified leads match your search."}
-
                 </td>
-
               </tr>
-
             )}
-
           </tbody>
-
         </table>
-
       </div>
-
     </div>
   );
 }

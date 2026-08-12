@@ -91,6 +91,9 @@ export const leadsApi = {
   addNote: (id, text) => {
     return api.post(`/businesses/${id}/notes`, { text });
   },
+
+  delete: (id) =>
+    api.delete(`/businesses/${id}`),
 };
 
 // =========================
