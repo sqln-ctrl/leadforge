@@ -1,43 +1,75 @@
 def calculate_lead_score(business) -> int:
     score = 0
 
-    # Has website
-    if business.website:
-        score += 25
+    # -----------------------------------------
+    # Website
+    # -----------------------------------------
+    # No website is GOOD for LeadForge because
+    # these businesses are potential web clients.
+    if not business.website:
+        score += 60
 
-    # Has phone
+    # -----------------------------------------
+    # Contact information
+    # -----------------------------------------
+    # Phone and email are both valuable.
     if business.phone:
         score += 20
 
-    # Has email
     if business.email:
-        score += 25
+        score += 20
 
-    # Has industry
+    # -----------------------------------------
+    # Additional information
+    # -----------------------------------------
     if business.industry:
-        score += 10
+        score += 5
 
-    # Has location
     if business.location:
-        score += 10
+        score += 5
 
-    # Known source
     if business.source:
-        score += 10
+        score += 5
 
     return min(score, 100)
 
 
-def get_qualification(score: int) -> str:
-    if score >= 80:
-        return "high_priority"
+def get_qualification(business) -> str:
+    """
+    A business is qualified only when:
 
-    if score >= 60:
+    1. It does NOT have a website
+    2. It has at least one contact method:
+       - phone OR
+       - email
+    """
+
+    has_no_website = not business.website
+    has_contact = bool(
+        business.phone or business.email
+    )
+
+    # -----------------------------------------
+    # Hot lead
+    # -----------------------------------------
+    if has_no_website and business.phone and business.email:
+        return "hot"
+
+    # -----------------------------------------
+    # Qualified lead
+    # -----------------------------------------
+    if has_no_website and has_contact:
         return "qualified"
 
-    if score >= 40:
+    # -----------------------------------------
+    # Potential
+    # -----------------------------------------
+    if has_no_website:
         return "potential"
 
+    # -----------------------------------------
+    # Not qualified
+    # -----------------------------------------
     return "unqualified"
 
 
@@ -45,6 +77,6 @@ def qualify_business(business):
     score = calculate_lead_score(business)
 
     business.lead_score = score
-    business.qualification = get_qualification(score)
+    business.qualification = get_qualification(business)
 
     return business
