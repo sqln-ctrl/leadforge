@@ -4,12 +4,13 @@ from app.api.v1.endpoints.auth import router as auth_router
 from app.api.v1.endpoints.business import router as business_router
 
 from app.api.v1.endpoints.discovery import router as discovery_router
+from app.api.v1.endpoints import ai
 
 api_router = APIRouter()
 
 api_router.include_router(auth_router, prefix="/auth", tags=["auth"])
 api_router.include_router(business_router, tags=["business"])
 api_router.include_router(discovery_router, tags=["discovery"])
-
+api_router.include_router(ai.router, tags=["ai"])
 print(">>> Registered auth router with prefix /auth")
 

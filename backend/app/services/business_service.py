@@ -60,3 +60,15 @@ def find_existing_business(db: Session, name: str, location: str | None) -> Busi
     if location:
         query = query.filter(Business.location == location)
     return query.first()
+
+
+def delete_business(db: Session, business_id: int) -> bool:
+    business = db.query(Business).filter(Business.id == business_id).first()
+
+    if business is None:
+        return False
+
+    db.delete(business)
+    db.commit()
+
+    return True

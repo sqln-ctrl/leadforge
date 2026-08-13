@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from app.services.business_service import delete_business as delete_business_service
 
 from app.core.db import get_db
 from app.schemas.business import (
@@ -61,3 +62,17 @@ def create_note(business_id: int, payload: NoteCreate, db: Session = Depends(get
     if note is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Business not found")
     return note
+
+from fastapi import HTTPException
+
+@router.delete("/{business_id}")
+def delete_business(business_id: int, db: Session = Depends(get_db)):
+    deleted = delete_business_service(db, business_id)
+
+    if not deleted:
+        raise HTTPException(
+            status_code=404,
+            detail="Business not found"
+        )
+
+    return {"message": "Business deleted successfully"}

@@ -34,6 +34,7 @@ class Settings(BaseSettings):
 
     # --- External APIs ---
     GEOAPIFY_API_KEY: str
+    GEMINI_API_KEY: str
 
 
 
