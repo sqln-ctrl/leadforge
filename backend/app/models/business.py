@@ -30,31 +30,34 @@ class Business(Base):
     status = Column(
         Enum(LeadStatus),
         default=LeadStatus.NEW,
-        nullable=False
+        nullable=False,
     )
 
     lead_score = Column(
         Integer,
         default=0,
-        nullable=False
+        nullable=False,
     )
 
     qualification = Column(
         String,
         default="unqualified",
-        nullable=False
+        nullable=False,
     )
 
     created_at = Column(
         DateTime,
-        default=datetime.utcnow
+        default=datetime.utcnow,
     )
 
+    # Notes belong to Business
     notes = relationship(
         "Note",
         back_populates="business",
-        cascade="all, delete-orphan"
+        cascade="all, delete-orphan",
     )
+
+    # A business can have one qualified lead
     qualified_lead = relationship(
         "QualifiedLead",
         back_populates="business",

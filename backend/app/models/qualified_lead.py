@@ -7,7 +7,6 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
 )
-
 from sqlalchemy.orm import relationship
 
 from app.core.db import Base
@@ -16,28 +15,46 @@ from app.core.db import Base
 class QualifiedLead(Base):
     __tablename__ = "qualified_leads"
 
-    id = Column(Integer, primary_key=True)
+    id = Column(
+        Integer,
+        primary_key=True,
+    )
 
     business_id = Column(
         Integer,
-        ForeignKey("businesses.id"),
+        ForeignKey(
+            "businesses.id",
+            ondelete="CASCADE",
+        ),
         nullable=False,
         unique=True,
     )
 
-    created_at = Column(
+    name = Column(
+        String,
+        nullable=False,
+    )
+
+    website = Column(String)
+    industry = Column(String)
+    location = Column(String)
+    phone = Column(String)
+    email = Column(String)
+    source = Column(String)
+
+    lead_score = Column(Integer)
+
+    qualified_at = Column(
         DateTime,
         default=datetime.utcnow,
         nullable=False,
     )
 
-    # Relationship with Business
     business = relationship(
         "Business",
         back_populates="qualified_lead",
     )
 
-    # Relationship with AIAnalysis
     ai_analysis = relationship(
         "AIAnalysis",
         back_populates="qualified_lead",

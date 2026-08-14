@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from app.core.db import get_db
 from app.models.qualified_lead import QualifiedLead
 from app.models.ai_analysis import AIAnalysis
-from app.services.gemini_service import analyze_lead
+from app.services.gemini_service import analyze_lead, MODEL_NAME
 
 
 router = APIRouter(
@@ -18,9 +18,12 @@ def analyze_qualified_lead(
     qualified_lead_id: int,
     db: Session = Depends(get_db),
 ):
+    """
+    Analyze ONLY a record from qualified_leads.
+    """
 
     # ----------------------------------------
-    # 1. Find qualified lead
+    # 1. Get QualifiedLead
     # ----------------------------------------
 
     qualified_lead = (
@@ -34,14 +37,11 @@ def analyze_qualified_lead(
     if not qualified_lead:
         raise HTTPException(
             status_code=404,
-            detail=(
-                f"Qualified lead with ID "
-                f"{qualified_lead_id} not found"
-            ),
+            detail="Qualified lead not found.",
         )
 
     # ----------------------------------------
-    # 2. Check for existing AI analysis
+    # 2. Check cached analysis
     # ----------------------------------------
 
     existing_analysis = (
@@ -79,7 +79,7 @@ def analyze_qualified_lead(
         }
 
     # ----------------------------------------
-    # 3. Prepare qualified lead data
+    # 3. Prepare ONLY QualifiedLead data
     # ----------------------------------------
 
     lead_data = {
@@ -101,7 +101,7 @@ def analyze_qualified_lead(
     }
 
     # ----------------------------------------
-    # 4. Analyze with Gemini
+    # 4. Gemini
     # ----------------------------------------
 
     try:
@@ -112,11 +112,11 @@ def analyze_qualified_lead(
 
     except Exception as e:
 
+        db.rollback()
+
         raise HTTPException(
             status_code=500,
-            detail=(
-                f"Gemini analysis failed: {str(e)}"
-            ),
+            detail=f"Gemini analysis failed: {str(e)}",
         )
 
     # ----------------------------------------
@@ -125,27 +125,20 @@ def analyze_qualified_lead(
 
     ai_analysis = AIAnalysis(
         qualified_lead_id=qualified_lead.id,
-
         ai_score=analysis.get("score"),
-
         priority=analysis.get("priority"),
-
         summary=analysis.get("summary"),
-
         opportunities=analysis.get(
             "opportunities",
-            []
+            [],
         ),
-
         recommended_services=analysis.get(
             "recommended_services",
-            []
+            [],
         ),
-
         outreach_angle=analysis.get(
             "outreach_angle"
         ),
-
         model=MODEL_NAME,
     )
 
@@ -154,14 +147,12 @@ def analyze_qualified_lead(
     db.refresh(ai_analysis)
 
     # ----------------------------------------
-    # 6. Return result
+    # 6. Return
     # ----------------------------------------
 
     return {
         "qualified_lead_id": qualified_lead.id,
-
         "cached": False,
-
         "ai_analysis": {
             "id": ai_analysis.id,
             "score": ai_analysis.ai_score,

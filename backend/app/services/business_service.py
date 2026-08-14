@@ -6,7 +6,8 @@ from sqlalchemy.orm import Session, joinedload
 from app.models.business import Business, LeadStatus
 from app.models.note import Note
 from app.schemas.business import BusinessCreate
-from app.services.lead_scoring import qualify_business
+from app.services.lead_scoring import qualify_lead
+from app.services.qualification_service import qualify_business
 
 # ...keep create_business, get_businesses, find_existing_business as-is, add:
 
@@ -35,7 +36,13 @@ def add_note(db: Session, business_id: int, text: str) -> Note | None:
 def create_business(db: Session, business: BusinessCreate) -> Business:
     db_business = Business(**business.model_dump())
 
-    qualify_business(db_business)
+    qualify_lead(db_business)
+    
+    qualify_business(
+    business,
+    db,
+    qualification_threshold=60
+    )
 
     db.add(db_business)
     db.commit()

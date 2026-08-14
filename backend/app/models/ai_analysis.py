@@ -9,7 +9,6 @@ from sqlalchemy import (
     ForeignKey,
     JSON,
 )
-
 from sqlalchemy.orm import relationship
 
 from app.core.db import Base
@@ -20,25 +19,34 @@ class AIAnalysis(Base):
 
     id = Column(
         Integer,
-        primary_key=True
+        primary_key=True,
     )
 
     qualified_lead_id = Column(
         Integer,
-        ForeignKey("qualified_leads.id"),
+        ForeignKey(
+            "qualified_leads.id",
+            ondelete="CASCADE",
+        ),
         nullable=False,
         unique=True,
     )
 
-    score = Column(Integer)
+    ai_score = Column(Integer)
 
     priority = Column(String)
 
     summary = Column(Text)
 
-    opportunities = Column(JSON)
+    opportunities = Column(
+        JSON,
+        default=list,
+    )
 
-    recommended_services = Column(JSON)
+    recommended_services = Column(
+        JSON,
+        default=list,
+    )
 
     outreach_angle = Column(Text)
 

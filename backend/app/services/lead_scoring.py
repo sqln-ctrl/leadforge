@@ -73,7 +73,7 @@ def get_qualification(business) -> str:
     return "unqualified"
 
 
-def qualify_business(business):
+def qualify_lead(business):
     score = calculate_lead_score(business)
 
     business.lead_score = score
