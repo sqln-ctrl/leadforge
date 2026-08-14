@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
+
 import {
   ArrowLeft,
   Mail,
@@ -8,34 +9,50 @@ import {
   Sparkles,
   MapPin,
   Building2,
+  FileText,
+  Copy,
+  Check,
 } from "lucide-react";
 
 import {
   qualifiedLeadsApi,
   aiApi,
+  proposalApi,
 } from "../lib/api";
 
 import ScoreBadge from "../components/leads/ScoreBadge";
 import Button from "../components/ui/Button";
 
-
 export default function LeadDetail() {
   const { id } = useParams();
-  const navigate = useNavigate();
 
   const [lead, setLead] = useState(null);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  // --------------------------------------------------
+  // AI Analysis
+  // --------------------------------------------------
+
   const [analysis, setAnalysis] = useState(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [aiError, setAiError] = useState("");
 
+  // --------------------------------------------------
+  // Proposal
+  // --------------------------------------------------
 
-  // --------------------------------------------------
-  // Load Qualified Lead
-  // --------------------------------------------------
+  const [proposal, setProposal] = useState(null);
+  const [generatingProposal, setGeneratingProposal] =
+    useState(false);
+  const [proposalError, setProposalError] = useState("");
+
+  const [copied, setCopied] = useState(false);
+
+  // ==================================================
+  // LOAD QUALIFIED LEAD
+  // ==================================================
 
   useEffect(() => {
     const loadLead = async () => {
@@ -44,22 +61,18 @@ export default function LeadDetail() {
         setError("");
 
         /*
-         * IMPORTANT:
+         * IMPORTANT
          *
-         * This gets the lead from:
+         * This endpoint reads ONLY from:
          *
-         * GET /qualified-leads/{id}
+         * qualified_leads
          *
-         * NOT:
-         *
-         * GET /businesses/{id}
+         * It does NOT read from businesses.
          */
 
-        const res =
-          await qualifiedLeadsApi.get(id);
+        const res = await qualifiedLeadsApi.get(id);
 
         setLead(res.data);
-
       } catch (err) {
         console.error(
           "Failed to load qualified lead:",
@@ -70,23 +83,19 @@ export default function LeadDetail() {
           err.response?.data?.detail ||
             "Couldn't load this qualified lead."
         );
-
       } finally {
         setLoading(false);
       }
     };
 
-
     if (id) {
       loadLead();
     }
-
   }, [id]);
 
-
-  // --------------------------------------------------
-  // AI Analysis
-  // --------------------------------------------------
+  // ==================================================
+  // AI ANALYSIS
+  // ==================================================
 
   async function handleAnalyze() {
     if (!id || analyzing) {
@@ -98,22 +107,16 @@ export default function LeadDetail() {
       setAiError("");
 
       /*
-       * IMPORTANT:
+       * `id` is the QualifiedLead ID.
        *
-       * `id` here is the QualifiedLead ID.
-       *
-       * Backend:
+       * Backend should use:
        *
        * POST /ai/analyze/{qualified_lead_id}
        */
 
-      const res =
-        await aiApi.analyze(id);
+      const res = await aiApi.analyze(id);
 
-      setAnalysis(
-        res.data.ai_analysis
-      );
-
+      setAnalysis(res.data.ai_analysis);
     } catch (err) {
       console.error(
         "AI analysis failed:",
@@ -124,16 +127,195 @@ export default function LeadDetail() {
         err.response?.data?.detail ||
           "AI analysis failed."
       );
-
     } finally {
       setAnalyzing(false);
     }
   }
 
+  // ==================================================
+  // GENERATE PROPOSAL
+  // ==================================================
 
-  // --------------------------------------------------
-  // Loading
-  // --------------------------------------------------
+  async function handleGenerateProposal() {
+    if (!id || generatingProposal) {
+      return;
+    }
+
+    try {
+      setGeneratingProposal(true);
+      setProposalError("");
+
+      /*
+       * IMPORTANT
+       *
+       * This calls:
+       *
+       * POST /proposals/generate/{qualified_lead_id}
+       *
+       * The backend gets the lead from
+       * qualified_leads table.
+       *
+       * Gemini then generates the proposal.
+       *
+       * The generated proposal is saved
+       * in the proposals table.
+       */
+
+      const res =
+        await proposalApi.generate(id);
+
+      console.log(
+        "Proposal response:",
+        res.data
+      );
+
+      /*
+       * Backend response:
+       *
+       * {
+       *   qualified_lead_id: 1,
+       *   cached: false,
+       *   proposal: {
+       *      id,
+       *      subject,
+       *      greeting,
+       *      introduction,
+       *      identified_problem,
+       *      proposed_solution,
+       *      services,
+       *      benefits,
+       *      call_to_action,
+       *      closing,
+       *      full_proposal,
+       *      model,
+       *      created_at
+       *   }
+       * }
+       */
+
+      if (!res.data?.proposal) {
+        throw new Error(
+          "The server did not return a proposal."
+        );
+      }
+
+      setProposal(res.data.proposal);
+    } catch (err) {
+      console.error(
+        "Proposal generation failed:",
+        err
+      );
+
+      setProposalError(
+        err.response?.data?.detail ||
+          err.message ||
+          "Failed to generate proposal."
+      );
+    } finally {
+      setGeneratingProposal(false);
+    }
+  }
+
+  // ==================================================
+  // COPY PROPOSAL
+  // ==================================================
+
+  async function handleCopyProposal() {
+    if (!proposal) {
+      return;
+    }
+
+    const text =
+      proposal.full_proposal ||
+      buildProposalText(proposal);
+
+    try {
+      await navigator.clipboard.writeText(text);
+
+      setCopied(true);
+
+      setTimeout(() => {
+        setCopied(false);
+      }, 2000);
+    } catch (err) {
+      console.error(
+        "Failed to copy proposal:",
+        err
+      );
+    }
+  }
+
+  // ==================================================
+  // BUILD PROPOSAL TEXT
+  // ==================================================
+
+  function buildProposalText(proposalData) {
+    if (!proposalData) {
+      return "";
+    }
+
+    let text = "";
+
+    if (proposalData.subject) {
+      text += `Subject: ${proposalData.subject}\n\n`;
+    }
+
+    if (proposalData.greeting) {
+      text += `${proposalData.greeting}\n\n`;
+    }
+
+    if (proposalData.introduction) {
+      text += `${proposalData.introduction}\n\n`;
+    }
+
+    if (proposalData.identified_problem) {
+      text += `Problem\n${proposalData.identified_problem}\n\n`;
+    }
+
+    if (proposalData.proposed_solution) {
+      text += `Proposed Solution\n${proposalData.proposed_solution}\n\n`;
+    }
+
+    if (
+      proposalData.services &&
+      proposalData.services.length > 0
+    ) {
+      text += `Services\n`;
+
+      proposalData.services.forEach((service) => {
+        text += `- ${service}\n`;
+      });
+
+      text += "\n";
+    }
+
+    if (
+      proposalData.benefits &&
+      proposalData.benefits.length > 0
+    ) {
+      text += `Benefits\n`;
+
+      proposalData.benefits.forEach((benefit) => {
+        text += `- ${benefit}\n`;
+      });
+
+      text += "\n";
+    }
+
+    if (proposalData.call_to_action) {
+      text += `${proposalData.call_to_action}\n\n`;
+    }
+
+    if (proposalData.closing) {
+      text += `${proposalData.closing}\n`;
+    }
+
+    return text.trim();
+  }
+
+  // ==================================================
+  // LOADING
+  // ==================================================
 
   if (loading) {
     return (
@@ -145,10 +327,9 @@ export default function LeadDetail() {
     );
   }
 
-
-  // --------------------------------------------------
-  // Error
-  // --------------------------------------------------
+  // ==================================================
+  // ERROR
+  // ==================================================
 
   if (error || !lead) {
     return (
@@ -159,6 +340,7 @@ export default function LeadDetail() {
           className="inline-flex items-center gap-2 text-sm text-ink-500 hover:text-forge-600"
         >
           <ArrowLeft className="h-4 w-4" />
+
           Back to qualified leads
         </Link>
 
@@ -173,26 +355,47 @@ export default function LeadDetail() {
     );
   }
 
+  // ==================================================
+  // EMAIL URL
+  // ==================================================
+
+  const emailSubject =
+    proposal?.subject ||
+    `Proposal for ${lead.name}`;
+
+  const emailBody =
+    proposal?.full_proposal ||
+    buildProposalText(proposal);
+
+  const mailtoUrl = lead.email
+    ? `mailto:${lead.email}?subject=${encodeURIComponent(
+        emailSubject
+      )}&body=${encodeURIComponent(emailBody)}`
+    : "#";
+
+  // ==================================================
+  // PAGE
+  // ==================================================
 
   return (
     <div className="space-y-6">
 
-      {/* -------------------------------------------------- */}
-      {/* Back */}
-      {/* -------------------------------------------------- */}
+      {/* ==================================================
+          BACK
+      ================================================== */}
 
       <Link
         to="/app"
         className="inline-flex items-center gap-2 text-sm text-ink-500 hover:text-forge-600"
       >
         <ArrowLeft className="h-4 w-4" />
+
         Back to qualified leads
       </Link>
 
-
-      {/* -------------------------------------------------- */}
-      {/* Lead Header */}
-      {/* -------------------------------------------------- */}
+      {/* ==================================================
+          LEAD HEADER
+      ================================================== */}
 
       <div className="rounded-xl border border-ink-100 bg-white p-6 shadow-card">
 
@@ -218,8 +421,7 @@ export default function LeadDetail() {
 
           </div>
 
-
-          {/* Score */}
+          {/* SCORE */}
 
           <div className="flex items-center gap-3">
 
@@ -237,17 +439,15 @@ export default function LeadDetail() {
 
       </div>
 
-
-      {/* -------------------------------------------------- */}
-      {/* Lead Information */}
-      {/* -------------------------------------------------- */}
+      {/* ==================================================
+          LEAD INFORMATION
+      ================================================== */}
 
       <div className="grid gap-6 lg:grid-cols-3">
 
-
-        {/* ------------------------------------------------ */}
-        {/* Main Information */}
-        {/* ------------------------------------------------ */}
+        {/* ==================================================
+            BUSINESS INFORMATION
+        ================================================== */}
 
         <div className="lg:col-span-2">
 
@@ -257,11 +457,9 @@ export default function LeadDetail() {
               Business Information
             </h2>
 
-
             <div className="mt-5 grid gap-5 sm:grid-cols-2">
 
-
-              {/* Industry */}
+              {/* INDUSTRY */}
 
               <div>
 
@@ -279,8 +477,7 @@ export default function LeadDetail() {
 
               </div>
 
-
-              {/* Location */}
+              {/* LOCATION */}
 
               <div>
 
@@ -298,8 +495,7 @@ export default function LeadDetail() {
 
               </div>
 
-
-              {/* Phone */}
+              {/* PHONE */}
 
               <div>
 
@@ -326,8 +522,7 @@ export default function LeadDetail() {
 
               </div>
 
-
-              {/* Email */}
+              {/* EMAIL */}
 
               <div>
 
@@ -354,8 +549,7 @@ export default function LeadDetail() {
 
               </div>
 
-
-              {/* Website */}
+              {/* WEBSITE */}
 
               <div>
 
@@ -388,8 +582,7 @@ export default function LeadDetail() {
 
               </div>
 
-
-              {/* Source */}
+              {/* SOURCE */}
 
               <div>
 
@@ -409,10 +602,9 @@ export default function LeadDetail() {
 
         </div>
 
-
-        {/* ------------------------------------------------ */}
-        {/* AI Analysis Card */}
-        {/* ------------------------------------------------ */}
+        {/* ==================================================
+            AI TOOLS
+        ================================================== */}
 
         <div>
 
@@ -423,17 +615,18 @@ export default function LeadDetail() {
               <Sparkles className="h-5 w-5 text-forge-500" />
 
               <h2 className="font-display text-lg font-semibold text-ink-900">
-                AI Analysis
+                AI Tools
               </h2>
 
             </div>
 
-
             <p className="mt-2 text-sm leading-6 text-ink-400">
-              Use Gemini to analyze this qualified lead
-              and identify potential opportunities.
+              Analyze this qualified lead with Gemini
+              or generate a personalized proposal for
+              outreach.
             </p>
 
+            {/* AI ANALYZE */}
 
             <Button
               onClick={handleAnalyze}
@@ -449,11 +642,26 @@ export default function LeadDetail() {
 
             </Button>
 
+            {/* GENERATE PROPOSAL */}
 
-            {/* AI Error */}
+            <Button
+              onClick={handleGenerateProposal}
+              disabled={generatingProposal}
+              variant="secondary"
+              className="mt-3 w-full"
+            >
+
+              <FileText className="h-4 w-4" />
+
+              {generatingProposal
+                ? "Generating Proposal..."
+                : "Generate Proposal"}
+
+            </Button>
+
+            {/* AI ERROR */}
 
             {aiError && (
-
               <div className="mt-4 rounded-lg border border-red-100 bg-red-50 p-3">
 
                 <p className="text-sm text-red-600">
@@ -461,7 +669,18 @@ export default function LeadDetail() {
                 </p>
 
               </div>
+            )}
 
+            {/* PROPOSAL ERROR */}
+
+            {proposalError && (
+              <div className="mt-4 rounded-lg border border-red-100 bg-red-50 p-3">
+
+                <p className="text-sm text-red-600">
+                  {proposalError}
+                </p>
+
+              </div>
             )}
 
           </div>
@@ -470,10 +689,9 @@ export default function LeadDetail() {
 
       </div>
 
-
-      {/* -------------------------------------------------- */}
-      {/* AI Analysis Result */}
-      {/* -------------------------------------------------- */}
+      {/* ==================================================
+          AI ANALYSIS RESULT
+      ================================================== */}
 
       {analysis && (
 
@@ -501,7 +719,6 @@ export default function LeadDetail() {
 
             </div>
 
-
             {analysis.score !== null &&
               analysis.score !== undefined && (
 
@@ -513,8 +730,7 @@ export default function LeadDetail() {
 
           </div>
 
-
-          {/* Priority */}
+          {/* PRIORITY */}
 
           {analysis.priority && (
 
@@ -532,8 +748,7 @@ export default function LeadDetail() {
 
           )}
 
-
-          {/* Summary */}
+          {/* SUMMARY */}
 
           {analysis.summary && (
 
@@ -551,8 +766,7 @@ export default function LeadDetail() {
 
           )}
 
-
-          {/* Opportunities */}
+          {/* OPPORTUNITIES */}
 
           {analysis.opportunities?.length > 0 && (
 
@@ -583,8 +797,7 @@ export default function LeadDetail() {
 
           )}
 
-
-          {/* Recommended Services */}
+          {/* RECOMMENDED SERVICES */}
 
           {analysis.recommended_services?.length > 0 && (
 
@@ -615,8 +828,7 @@ export default function LeadDetail() {
 
           )}
 
-
-          {/* Outreach Angle */}
+          {/* OUTREACH ANGLE */}
 
           {analysis.outreach_angle && (
 
@@ -633,6 +845,339 @@ export default function LeadDetail() {
             </div>
 
           )}
+
+        </div>
+
+      )}
+
+      {/* ==================================================
+          GENERATED PROPOSAL
+      ================================================== */}
+
+      {proposal && (
+
+        <div className="rounded-xl border border-ink-100 bg-white p-6 shadow-card">
+
+          {/* HEADER */}
+
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+
+            <div>
+
+              <div className="flex items-center gap-2">
+
+                <FileText className="h-5 w-5 text-forge-500" />
+
+                <h2 className="font-display text-lg font-semibold text-ink-900">
+                  Generated Proposal
+                </h2>
+
+              </div>
+
+              <p className="mt-1 text-xs text-ink-400">
+                Personalized AI-generated proposal for{" "}
+                {lead.name}
+              </p>
+
+            </div>
+
+            {proposal.model && (
+
+              <span className="text-xs text-ink-400">
+                Model: {proposal.model}
+              </span>
+
+            )}
+
+          </div>
+
+  
+          {/* ==================================================
+              FULL PROPOSAL
+          ================================================== */}
+
+          {proposal.full_proposal && (
+
+            <div className="mt-6">
+
+              <div className="flex items-center justify-between">
+
+                <p className="text-xs font-medium uppercase tracking-wide text-ink-400">
+                  Proposal
+                </p>
+
+                <button
+                  type="button"
+                  onClick={handleCopyProposal}
+                  className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-ink-500 transition hover:bg-ink-50 hover:text-forge-600"
+                >
+
+                  {copied ? (
+                    <>
+                      <Check className="h-3.5 w-3.5" />
+                      Copied
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="h-3.5 w-3.5" />
+                      Copy
+                    </>
+                  )}
+
+                </button>
+
+              </div>
+
+              <div className="mt-2 rounded-lg bg-ink-50 p-5">
+
+                <p className="whitespace-pre-wrap text-sm leading-7 text-ink-700">
+                  {proposal.full_proposal}
+                </p>
+
+              </div>
+
+            </div>
+
+          )}
+
+          {/* ==================================================
+              STRUCTURED PROPOSAL DETAILS
+          ================================================== */}
+
+          {!proposal.full_proposal && (
+
+            <div className="mt-6 space-y-6">
+
+              {/* GREETING */}
+
+              {proposal.greeting && (
+
+                <div>
+
+                  <p className="text-xs font-medium uppercase tracking-wide text-ink-400">
+                    Greeting
+                  </p>
+
+                  <p className="mt-2 text-sm leading-7 text-ink-700">
+                    {proposal.greeting}
+                  </p>
+
+                </div>
+
+              )}
+
+              {/* INTRODUCTION */}
+
+              {proposal.introduction && (
+
+                <div>
+
+                  <p className="text-xs font-medium uppercase tracking-wide text-ink-400">
+                    Introduction
+                  </p>
+
+                  <p className="mt-2 text-sm leading-7 text-ink-700">
+                    {proposal.introduction}
+                  </p>
+
+                </div>
+
+              )}
+
+              {/* IDENTIFIED PROBLEM */}
+
+              {proposal.identified_problem && (
+
+                <div>
+
+                  <p className="text-xs font-medium uppercase tracking-wide text-ink-400">
+                    Identified Problem
+                  </p>
+
+                  <p className="mt-2 text-sm leading-7 text-ink-700">
+                    {proposal.identified_problem}
+                  </p>
+
+                </div>
+
+              )}
+
+              {/* PROPOSED SOLUTION */}
+
+              {proposal.proposed_solution && (
+
+                <div>
+
+                  <p className="text-xs font-medium uppercase tracking-wide text-ink-400">
+                    Proposed Solution
+                  </p>
+
+                  <p className="mt-2 text-sm leading-7 text-ink-700">
+                    {proposal.proposed_solution}
+                  </p>
+
+                </div>
+
+              )}
+
+              {/* SERVICES */}
+
+              {proposal.services?.length > 0 && (
+
+                <div>
+
+                  <p className="text-xs font-medium uppercase tracking-wide text-ink-400">
+                    Services
+                  </p>
+
+                  <div className="mt-2 flex flex-wrap gap-2">
+
+                    {proposal.services.map(
+                      (service, index) => (
+
+                        <span
+                          key={index}
+                          className="rounded-full bg-forge-50 px-3 py-1.5 text-xs font-medium text-forge-700"
+                        >
+                          {service}
+                        </span>
+
+                      )
+                    )}
+
+                  </div>
+
+                </div>
+
+              )}
+
+              {/* BENEFITS */}
+
+              {proposal.benefits?.length > 0 && (
+
+                <div>
+
+                  <p className="text-xs font-medium uppercase tracking-wide text-ink-400">
+                    Benefits
+                  </p>
+
+                  <ul className="mt-2 space-y-2">
+
+                    {proposal.benefits.map(
+                      (benefit, index) => (
+
+                        <li
+                          key={index}
+                          className="rounded-lg bg-ink-50 px-4 py-3 text-sm leading-6 text-ink-700"
+                        >
+                          {benefit}
+                        </li>
+
+                      )
+                    )}
+
+                  </ul>
+
+                </div>
+
+              )}
+
+              {/* CALL TO ACTION */}
+
+              {proposal.call_to_action && (
+
+                <div>
+
+                  <p className="text-xs font-medium uppercase tracking-wide text-ink-400">
+                    Call to Action
+                  </p>
+
+                  <p className="mt-2 rounded-lg bg-ink-50 p-4 text-sm leading-7 text-ink-700">
+                    {proposal.call_to_action}
+                  </p>
+
+                </div>
+
+              )}
+
+              {/* CLOSING */}
+
+              {proposal.closing && (
+
+                <div>
+
+                  <p className="text-xs font-medium uppercase tracking-wide text-ink-400">
+                    Closing
+                  </p>
+
+                  <p className="mt-2 text-sm leading-7 text-ink-700">
+                    {proposal.closing}
+                  </p>
+
+                </div>
+
+              )}
+
+            </div>
+
+          )}
+
+          {/* ==================================================
+              ACTIONS
+          ================================================== */}
+
+          <div className="mt-6 flex flex-wrap gap-3">
+
+            {/* COPY */}
+
+            <Button
+              variant="secondary"
+              onClick={handleCopyProposal}
+            >
+
+              {copied ? (
+                <Check className="h-4 w-4" />
+              ) : (
+                <Copy className="h-4 w-4" />
+              )}
+
+              {copied
+                ? "Copied"
+                : "Copy Proposal"}
+
+            </Button>
+
+            {/* SEND EMAIL */}
+
+            {lead.email ? (
+
+              <a
+                href={mailtoUrl}
+                className="inline-flex items-center gap-2 rounded-lg bg-forge-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-forge-700"
+              >
+
+                <Mail className="h-4 w-4" />
+
+                Send Proposal
+
+              </a>
+
+            ) : (
+
+              <Button
+                variant="secondary"
+                disabled
+              >
+
+                <Mail className="h-4 w-4" />
+
+                No Email Available
+
+              </Button>
+
+            )}
+
+          </div>
 
         </div>
 

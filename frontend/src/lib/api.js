@@ -149,3 +149,15 @@ export const aiApi = {
     return api.post(`/ai/analyze/${qualifiedLeadId}`);
   },
 };
+
+// ==================================================
+// PROPOSAL API
+// ==================================================
+
+export const proposalApi = {
+  generate: (qualifiedLeadId) => {
+    return api.post(
+      `/proposals/generate/${qualifiedLeadId}`
+    );
+  },
+};
