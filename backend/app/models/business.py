@@ -55,3 +55,9 @@ class Business(Base):
         back_populates="business",
         cascade="all, delete-orphan"
     )
+    qualified_lead = relationship(
+        "QualifiedLead",
+        back_populates="business",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )

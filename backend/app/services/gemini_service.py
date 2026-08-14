@@ -19,7 +19,7 @@ LEAD_ANALYSIS_SCHEMA = {
     "properties": {
         "score": {
             "type": "integer",
-            "description": "Lead quality score from 0 to 100."
+            "description": "AI opportunity score from 0 to 100."
         },
         "priority": {
             "type": "string",
@@ -27,18 +27,6 @@ LEAD_ANALYSIS_SCHEMA = {
         },
         "summary": {
             "type": "string"
-        },
-        "strengths": {
-            "type": "array",
-            "items": {
-                "type": "string"
-            }
-        },
-        "weaknesses": {
-            "type": "array",
-            "items": {
-                "type": "string"
-            }
         },
         "opportunities": {
             "type": "array",
@@ -60,8 +48,6 @@ LEAD_ANALYSIS_SCHEMA = {
         "score",
         "priority",
         "summary",
-        "strengths",
-        "weaknesses",
         "opportunities",
         "recommended_services",
         "outreach_angle"
@@ -69,45 +55,44 @@ LEAD_ANALYSIS_SCHEMA = {
 }
 
 
-def analyze_lead(business: dict) -> dict:
+def analyze_lead(qualified_lead: dict) -> dict:
 
     prompt = f"""
-You are an expert B2B sales intelligence assistant for LeadForge.
+You are the AI sales intelligence engine inside LeadForge.
 
-LeadForge helps web developers, software agencies, and AI automation
-agencies identify businesses that may need their services.
+The following business has ALREADY passed LeadForge's
+qualification system.
 
-Analyze the following business lead.
+You must NOT determine whether the lead is qualified.
 
-BUSINESS DATA:
+Your job is to deeply analyze this qualified lead and
+identify realistic commercial opportunities for a:
 
-{json.dumps(business, indent=2, default=str)}
+- Web development agency
+- Software development agency
+- AI automation agency
 
-Your job is to determine how valuable this business is as a potential
-sales prospect.
+QUALIFIED LEAD DATA:
 
-Evaluate:
+{json.dumps(qualified_lead, indent=2, default=str)}
 
-1. Lead quality from 0 to 100.
+Analyze:
+
+1. AI opportunity score from 0 to 100.
 2. Priority: low, medium, or high.
-3. Short summary.
-4. Business strengths.
-5. Potential weaknesses.
-6. Possible website, software, or AI automation opportunities.
-7. Services that could realistically be offered to this business.
-8. A personalized outreach angle.
+3. Concise business summary.
+4. Potential business opportunities.
+5. Recommended services.
+6. Personalized outreach angle.
 
-IMPORTANT RULES:
+IMPORTANT:
 
 - Do not invent facts.
-- Only use information provided in the business data.
-- If important information is missing, acknowledge that.
-- Do not claim that a business has a bad website unless there is
-  evidence for it.
-- Focus on realistic opportunities for web development,
-  software development, and AI automation.
-- A business having a website does NOT automatically mean the
-  website is bad.
+- Only use information provided.
+- Do not claim a website is poor without evidence.
+- Do not assume a business needs a service without evidence.
+- Focus on realistic commercial opportunities.
+- This lead has already been qualified by LeadForge.
 """
 
     response = client.models.generate_content(
@@ -125,4 +110,10 @@ IMPORTANT RULES:
             "Gemini returned an empty response"
         )
 
-    return json.loads(response.text)
+    try:
+        return json.loads(response.text)
+
+    except json.JSONDecodeError as exc:
+        raise RuntimeError(
+            "Gemini returned invalid JSON"
+        ) from exc
