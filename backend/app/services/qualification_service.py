@@ -47,35 +47,14 @@ def qualify_business(
     db: Session,
     qualification_threshold: int = QUALIFICATION_THRESHOLD,
 ) -> Business:
-    """
-    Calculate the business score.
-
-    If qualified:
-        Business.qualification = "qualified"
-        Create a QualifiedLead record.
-
-    Gemini is NOT called here.
-    """
-
-    # ----------------------------------------
-    # 1. Calculate score
-    # ----------------------------------------
 
     score = calculate_lead_score(business)
 
     business.lead_score = score
 
-    # ----------------------------------------
-    # 2. Qualified
-    # ----------------------------------------
-
     if score >= qualification_threshold:
 
         business.qualification = "qualified"
-
-        # ----------------------------------------
-        # Check existing QualifiedLead
-        # ----------------------------------------
 
         existing_qualified_lead = (
             db.query(QualifiedLead)
@@ -84,10 +63,6 @@ def qualify_business(
             )
             .first()
         )
-
-        # ----------------------------------------
-        # Create QualifiedLead
-        # ----------------------------------------
 
         if not existing_qualified_lead:
 
@@ -107,7 +82,7 @@ def qualify_business(
             db.add(qualified_lead)
 
         else:
-            # Keep the QualifiedLead data synchronized
+
             existing_qualified_lead.name = business.name
             existing_qualified_lead.website = business.website
             existing_qualified_lead.industry = business.industry
@@ -117,19 +92,7 @@ def qualify_business(
             existing_qualified_lead.source = business.source
             existing_qualified_lead.lead_score = business.lead_score
 
-    # ----------------------------------------
-    # 3. Not qualified
-    # ----------------------------------------
-
     else:
-
         business.qualification = "unqualified"
-
-    # ----------------------------------------
-    # 4. Save
-    # ----------------------------------------
-
-    db.commit()
-    db.refresh(business)
 
     return business
