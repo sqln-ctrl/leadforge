@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { Search, Download, Trash2 } from "lucide-react";
 import * as XLSX from "xlsx";
 
-import { leadsApi } from "../lib/api";
+import { aiApi, leadsApi } from "../lib/api";
 import ScoreBadge from "../components/leads/ScoreBadge";
 import Button from "../components/ui/Button";
 

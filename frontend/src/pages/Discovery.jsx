@@ -197,6 +197,7 @@ export default function Discovery() {
                   <li key={lead.id}>
                     <Link
                       to={`/app/leads/${lead.id}`}
+                      state={{ from: "/app/discovery" }}
                       className="flex items-center justify-between px-4 py-3 hover:bg-ink-50/60"
                     >
                       <div>

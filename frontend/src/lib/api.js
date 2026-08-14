@@ -110,3 +110,12 @@ export const discoveryApi = {
 export const leadApi = {
   getById: (id) => api.get(`/leads/${id}`),
 };
+
+// =========================
+// AI API
+// =========================
+
+export const aiApi = {
+  analyze: (qualifiedLeadId) =>
+    api.post(`/ai/analyze/${qualifiedLeadId}`),
+};

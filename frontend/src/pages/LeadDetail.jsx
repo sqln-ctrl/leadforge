@@ -1,14 +1,14 @@
-
 import { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useLocation } from "react-router-dom";
 import {
   ArrowLeft,
   Mail,
   Phone,
   Globe,
+  Sparkles,
 } from "lucide-react";
 
-import { leadsApi } from "../lib/api";
+import { aiApi, leadsApi } from "../lib/api";
 import ScoreBadge from "../components/leads/ScoreBadge";
 import StatusBadge from "../components/leads/StatusBadge";
 import Button from "../components/ui/Button";
@@ -22,6 +22,15 @@ export default function LeadDetail() {
 
   const [draft, setDraft] = useState("");
   const [addingNote, setAddingNote] = useState(false);
+
+  // AI Analysis state
+  const [aiAnalysis, setAiAnalysis] = useState(null);
+  const [analyzingAI, setAnalyzingAI] = useState(false);
+  const [aiError, setAiError] = useState("");
+
+  const location = useLocation();
+
+  const backTo = location.state?.from || "/app";
 
   // --------------------------------------------------
   // Load lead
@@ -93,6 +102,49 @@ export default function LeadDetail() {
   }
 
   // --------------------------------------------------
+  // Analyze lead with Gemini
+  // --------------------------------------------------
+
+  async function analyzeWithAI() {
+    if (!lead || analyzingAI) return;
+
+    const qualifiedLeadId =
+      lead.qualified_lead_id;
+
+    if (!qualifiedLeadId) {
+      setAiError(
+        "This lead does not have a qualified lead record."
+      );
+      return;
+    }
+
+    try {
+      setAnalyzingAI(true);
+      setAiError("");
+
+      const { data } = await aiApi.analyze(
+        qualifiedLeadId
+      );
+
+      setAiAnalysis(
+        data.ai_analysis || null
+      );
+    } catch (err) {
+      console.error(
+        "Failed to analyze lead with AI:",
+        err
+      );
+
+      setAiError(
+        err.response?.data?.detail ||
+          "Failed to analyze this lead with AI."
+      );
+    } finally {
+      setAnalyzingAI(false);
+    }
+  }
+
+  // --------------------------------------------------
   // Loading
   // --------------------------------------------------
 
@@ -114,7 +166,7 @@ export default function LeadDetail() {
     return (
       <div className="space-y-4">
         <Link
-          to="/app"
+          to={backTo}
           className="inline-flex items-center gap-2 text-sm text-ink-500 hover:text-ink-800"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -134,13 +186,17 @@ export default function LeadDetail() {
     return null;
   }
 
+  // --------------------------------------------------
+  // Render
+  // --------------------------------------------------
+
   return (
     <div className="space-y-6">
 
       {/* Back */}
 
       <Link
-        to="/app"
+        to={backTo}
         className="inline-flex items-center gap-2 text-sm text-ink-500 hover:text-ink-800"
       >
         <ArrowLeft className="h-4 w-4" />
@@ -182,7 +238,9 @@ export default function LeadDetail() {
 
       <div className="grid grid-cols-3 gap-6">
 
-        {/* LEFT COLUMN */}
+        {/* =========================================
+            LEFT COLUMN
+        ========================================== */}
 
         <div className="col-span-2 space-y-6">
 
@@ -307,11 +365,265 @@ export default function LeadDetail() {
 
         </div>
 
-        {/* RIGHT COLUMN */}
+        {/* =========================================
+            RIGHT COLUMN
+        ========================================== */}
 
         <div className="space-y-6">
 
-          {/* Automatic Qualification */}
+          {/* =======================================
+              AI ANALYSIS
+          ======================================== */}
+
+          <section className="rounded-xl border border-ink-100 bg-white p-5 shadow-card">
+
+            <div className="flex items-start gap-3">
+
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-forge-50">
+                <Sparkles className="h-4 w-4 text-forge-600" />
+              </div>
+
+              <div>
+                <h2 className="text-sm font-semibold text-ink-800">
+                  AI Analysis
+                </h2>
+
+                <p className="mt-1 text-xs text-ink-400">
+                  Gemini analysis for this qualified lead.
+                </p>
+              </div>
+
+            </div>
+
+            {/* Analyze button */}
+
+            {!aiAnalysis && !analyzingAI && (
+              <div className="mt-4">
+
+                <Button
+                  onClick={analyzeWithAI}
+                  disabled={
+                    lead.qualification !==
+                    "qualified"
+                  }
+                  className="w-full"
+                >
+                  <Sparkles className="mr-2 h-4 w-4" />
+
+                  Analyze with AI
+                </Button>
+
+                {lead.qualification !==
+                  "qualified" && (
+                  <p className="mt-2 text-xs text-ink-400">
+                    Only qualified leads can be analyzed.
+                  </p>
+                )}
+
+                {aiError && (
+                  <p className="mt-3 text-xs text-red-500">
+                    {aiError}
+                  </p>
+                )}
+
+              </div>
+            )}
+
+            {/* Loading */}
+
+            {analyzingAI && (
+              <div className="mt-4 rounded-lg bg-ink-50 px-3 py-4">
+
+                <div className="flex items-center gap-2">
+
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-ink-200 border-t-forge-500" />
+
+                  <p className="text-sm text-ink-600">
+                    Analyzing lead...
+                  </p>
+
+                </div>
+
+                <p className="mt-2 text-xs text-ink-400">
+                  Gemini is analyzing the qualified lead.
+                </p>
+
+              </div>
+            )}
+
+            {/* Error */}
+
+            {!analyzingAI &&
+              aiError &&
+              !aiAnalysis && (
+                <div className="mt-4 rounded-lg border border-red-100 bg-red-50 p-3">
+
+                  <p className="text-xs text-red-600">
+                    {aiError}
+                  </p>
+
+                </div>
+              )}
+
+            {/* AI Result */}
+
+            {aiAnalysis && !analyzingAI && (
+              <div className="mt-5 space-y-5">
+
+                {/* Score + Priority */}
+
+                <div className="grid grid-cols-2 gap-3">
+
+                  <div className="rounded-lg bg-ink-50 p-3">
+
+                    <p className="text-xs font-medium uppercase tracking-wide text-ink-400">
+                      AI Score
+                    </p>
+
+                    <p className="mt-1 text-xl font-semibold text-ink-900">
+                      {aiAnalysis.score ?? 0}
+
+                      <span className="text-sm font-normal text-ink-400">
+                        {" "}/ 100
+                      </span>
+                    </p>
+
+                  </div>
+
+                  <div className="rounded-lg bg-ink-50 p-3">
+
+                    <p className="text-xs font-medium uppercase tracking-wide text-ink-400">
+                      Priority
+                    </p>
+
+                    <p className="mt-1 text-sm font-semibold uppercase text-ink-800">
+                      {aiAnalysis.priority ||
+                        "N/A"}
+                    </p>
+
+                  </div>
+
+                </div>
+
+                {/* Summary */}
+
+                {aiAnalysis.summary && (
+                  <div>
+
+                    <p className="text-xs font-medium uppercase tracking-wide text-ink-400">
+                      Summary
+                    </p>
+
+                    <p className="mt-1 text-sm leading-6 text-ink-600">
+                      {aiAnalysis.summary}
+                    </p>
+
+                  </div>
+                )}
+
+                {/* Opportunities */}
+
+                {aiAnalysis.opportunities?.length >
+                  0 && (
+                  <div>
+
+                    <p className="text-xs font-medium uppercase tracking-wide text-ink-400">
+                      Opportunities
+                    </p>
+
+                    <ul className="mt-2 space-y-2">
+
+                      {aiAnalysis.opportunities.map(
+                        (opportunity, index) => (
+                          <li
+                            key={index}
+                            className="flex gap-2 text-sm text-ink-600"
+                          >
+                            <span className="text-forge-500">
+                              •
+                            </span>
+
+                            <span>
+                              {opportunity}
+                            </span>
+                          </li>
+                        )
+                      )}
+
+                    </ul>
+                  </div>
+                )}
+
+                {/* Recommended Services */}
+
+                {aiAnalysis
+                  .recommended_services
+                  ?.length > 0 && (
+                  <div>
+
+                    <p className="text-xs font-medium uppercase tracking-wide text-ink-400">
+                      Recommended Services
+                    </p>
+
+                    <ul className="mt-2 space-y-2">
+
+                      {aiAnalysis.recommended_services.map(
+                        (service, index) => (
+                          <li
+                            key={index}
+                            className="flex gap-2 text-sm text-ink-600"
+                          >
+                            <span className="text-forge-500">
+                              •
+                            </span>
+
+                            <span>
+                              {service}
+                            </span>
+                          </li>
+                        )
+                      )}
+
+                    </ul>
+                  </div>
+                )}
+
+                {/* Outreach Angle */}
+
+                {aiAnalysis.outreach_angle && (
+                  <div>
+
+                    <p className="text-xs font-medium uppercase tracking-wide text-ink-400">
+                      Outreach Angle
+                    </p>
+
+                    <div className="mt-2 rounded-lg bg-ink-50 p-3">
+
+                      <p className="text-sm leading-6 text-ink-600">
+                        {aiAnalysis.outreach_angle}
+                      </p>
+
+                    </div>
+
+                  </div>
+                )}
+
+                {/* Model */}
+
+                {aiAnalysis.model && (
+                  <p className="pt-1 text-xs text-ink-300">
+                    Powered by {aiAnalysis.model}
+                  </p>
+                )}
+
+              </div>
+            )}
+
+          </section>
+
+          {/* =======================================
+              AUTOMATIC QUALIFICATION
+          ======================================== */}
 
           <section className="rounded-xl border border-ink-100 bg-white p-5 shadow-card">
 
@@ -332,8 +644,9 @@ export default function LeadDetail() {
               </p>
 
               <p className="mt-1 text-sm font-semibold capitalize text-ink-800">
-                {(lead.qualification || "unqualified")
-                  .replaceAll("_", " ")}
+                {(lead.qualification ||
+                  "unqualified"
+                ).replaceAll("_", " ")}
               </p>
 
             </div>
@@ -350,7 +663,9 @@ export default function LeadDetail() {
 
           </section>
 
-          {/* Status */}
+          {/* =======================================
+              STATUS
+          ======================================== */}
 
           <section className="rounded-xl border border-ink-100 bg-white p-5 shadow-card">
 
@@ -369,7 +684,9 @@ export default function LeadDetail() {
 
           </section>
 
-          {/* Contact */}
+          {/* =======================================
+              CONTACT
+          ======================================== */}
 
           <section className="rounded-xl border border-ink-100 bg-white p-5 shadow-card">
 
@@ -430,8 +747,12 @@ export default function LeadDetail() {
                 {lead.website ? (
                   <a
                     href={
-                      lead.website.startsWith("http://") ||
-                      lead.website.startsWith("https://")
+                      lead.website.startsWith(
+                        "http://"
+                      ) ||
+                      lead.website.startsWith(
+                        "https://"
+                      )
                         ? lead.website
                         : `https://${lead.website}`
                     }
@@ -450,6 +771,7 @@ export default function LeadDetail() {
               </li>
 
             </ul>
+
           </section>
 
         </div>
@@ -457,6 +779,11 @@ export default function LeadDetail() {
     </div>
   );
 }
+
+
+// --------------------------------------------------
+// Info component
+// --------------------------------------------------
 
 function Info({ label, value }) {
   return (
