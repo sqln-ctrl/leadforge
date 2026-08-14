@@ -82,40 +82,53 @@ export const leadsApi = {
     return api.get(`/businesses/${id}`);
   },
 
-  // Update business status
   updateStatus: (id, status) => {
     return api.patch(`/businesses/${id}`, { status });
   },
 
-  // Add a note
   addNote: (id, text) => {
-    return api.post(`/businesses/${id}/notes`, { text });
+    return api.post(`/businesses/${id}/notes`, {
+      text,
+    });
   },
 
-  delete: (id) =>
-    api.delete(`/businesses/${id}`),
-};
-
-// =========================
-// DISCOVERY API
-// =========================
-
-export const discoveryApi = {
-  // Search businesses using Geoapify
-  search: (data) => {
-    return api.post("/discovery/search", data);
+  delete: (id) => {
+    return api.delete(`/businesses/${id}`);
   },
 };
 
-export const leadApi = {
-  getById: (id) => api.get(`/leads/${id}`),
+
+// =========================
+// QUALIFIED LEADS API
+// =========================
+
+export const qualifiedLeadsApi = {
+
+  // ONLY records from qualified_leads
+  list: () => {
+    return api.get("/qualified-leads/");
+  },
+
+  // Get one QualifiedLead
+  get: (id) => {
+    return api.get(`/qualified-leads/${id}`);
+  },
+
+  // Delete qualified lead
+  delete: (id) => {
+    return api.delete(`/qualified-leads/${id}`);
+  },
 };
+
 
 // =========================
 // AI API
 // =========================
 
 export const aiApi = {
-  analyze: (qualifiedLeadId) =>
-    api.post(`/ai/analyze/${qualifiedLeadId}`),
+  analyze: (qualifiedLeadId) => {
+    return api.post(
+      `/ai/analyze/${qualifiedLeadId}`
+    );
+  },
 };

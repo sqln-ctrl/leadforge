@@ -1,148 +1,135 @@
 import { useEffect, useState } from "react";
-import { useParams, Link, useLocation } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
   Mail,
   Phone,
   Globe,
   Sparkles,
+  MapPin,
+  Building2,
 } from "lucide-react";
 
-import { aiApi, leadsApi } from "../lib/api";
+import {
+  qualifiedLeadsApi,
+  aiApi,
+} from "../lib/api";
+
 import ScoreBadge from "../components/leads/ScoreBadge";
-import StatusBadge from "../components/leads/StatusBadge";
 import Button from "../components/ui/Button";
+
 
 export default function LeadDetail() {
   const { id } = useParams();
+  const navigate = useNavigate();
 
   const [lead, setLead] = useState(null);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const [draft, setDraft] = useState("");
-  const [addingNote, setAddingNote] = useState(false);
-
-  // AI Analysis state
-  const [aiAnalysis, setAiAnalysis] = useState(null);
-  const [analyzingAI, setAnalyzingAI] = useState(false);
+  const [analysis, setAnalysis] = useState(null);
+  const [analyzing, setAnalyzing] = useState(false);
   const [aiError, setAiError] = useState("");
 
-  const location = useLocation();
-
-  const backTo = location.state?.from || "/app";
 
   // --------------------------------------------------
-  // Load lead
+  // Load Qualified Lead
   // --------------------------------------------------
 
   useEffect(() => {
-    async function fetchLead() {
+    const loadLead = async () => {
       try {
         setLoading(true);
         setError("");
 
-        const res = await leadsApi.get(id);
+        /*
+         * IMPORTANT:
+         *
+         * This gets the lead from:
+         *
+         * GET /qualified-leads/{id}
+         *
+         * NOT:
+         *
+         * GET /businesses/{id}
+         */
 
-        setLead({
-          ...res.data,
-          notes: res.data.notes || [],
-        });
+        const res =
+          await qualifiedLeadsApi.get(id);
+
+        setLead(res.data);
+
       } catch (err) {
-        console.error("Failed to load lead:", err);
+        console.error(
+          "Failed to load qualified lead:",
+          err
+        );
 
         setError(
           err.response?.data?.detail ||
-            "Couldn't load this lead."
+            "Couldn't load this qualified lead."
         );
+
       } finally {
         setLoading(false);
       }
-    }
+    };
+
 
     if (id) {
-      fetchLead();
+      loadLead();
     }
+
   }, [id]);
 
-  // --------------------------------------------------
-  // Add note
-  // --------------------------------------------------
-
-  async function addNote() {
-    if (!draft.trim() || !lead || addingNote) return;
-
-    setAddingNote(true);
-
-    try {
-      const { data: newNote } = await leadsApi.addNote(
-        id,
-        draft.trim()
-      );
-
-      setLead((prev) => ({
-        ...prev,
-        notes: [
-          newNote,
-          ...(prev.notes || []),
-        ],
-      }));
-
-      setDraft("");
-    } catch (err) {
-      console.error("Failed to add note:", err);
-
-      setError(
-        err.response?.data?.detail ||
-          "Failed to add note."
-      );
-    } finally {
-      setAddingNote(false);
-    }
-  }
 
   // --------------------------------------------------
-  // Analyze lead with Gemini
+  // AI Analysis
   // --------------------------------------------------
 
-  async function analyzeWithAI() {
-    if (!lead || analyzingAI) return;
-
-    const qualifiedLeadId =
-      lead.qualified_lead_id;
-
-    if (!qualifiedLeadId) {
-      setAiError(
-        "This lead does not have a qualified lead record."
-      );
+  async function handleAnalyze() {
+    if (!id || analyzing) {
       return;
     }
 
     try {
-      setAnalyzingAI(true);
+      setAnalyzing(true);
       setAiError("");
 
-      const { data } = await aiApi.analyze(
-        qualifiedLeadId
+      /*
+       * IMPORTANT:
+       *
+       * `id` here is the QualifiedLead ID.
+       *
+       * Backend:
+       *
+       * POST /ai/analyze/{qualified_lead_id}
+       */
+
+      const res =
+        await aiApi.analyze(id);
+
+      setAnalysis(
+        res.data.ai_analysis
       );
 
-      setAiAnalysis(
-        data.ai_analysis || null
-      );
     } catch (err) {
       console.error(
-        "Failed to analyze lead with AI:",
+        "AI analysis failed:",
         err
       );
 
       setAiError(
         err.response?.data?.detail ||
-          "Failed to analyze this lead with AI."
+          "AI analysis failed."
       );
+
     } finally {
-      setAnalyzingAI(false);
+      setAnalyzing(false);
     }
   }
+
 
   // --------------------------------------------------
   // Loading
@@ -150,651 +137,507 @@ export default function LeadDetail() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20">
+      <div className="flex items-center justify-center py-12">
         <p className="text-sm text-ink-400">
-          Loading lead...
+          Loading qualified lead...
         </p>
       </div>
     );
   }
 
+
   // --------------------------------------------------
   // Error
   // --------------------------------------------------
 
-  if (error && !lead) {
+  if (error || !lead) {
     return (
       <div className="space-y-4">
+
         <Link
-          to={backTo}
-          className="inline-flex items-center gap-2 text-sm text-ink-500 hover:text-ink-800"
+          to="/app/leads"
+          className="inline-flex items-center gap-2 text-sm text-ink-500 hover:text-forge-600"
         >
           <ArrowLeft className="h-4 w-4" />
-          Back to leads
+          Back to qualified leads
         </Link>
 
-        <div className="rounded-xl border border-red-100 bg-red-50 p-5">
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4">
           <p className="text-sm text-red-600">
-            {error || "Lead not found."}
+            {error ||
+              "Qualified lead not found."}
           </p>
         </div>
+
       </div>
     );
   }
 
-  if (!lead) {
-    return null;
-  }
-
-  // --------------------------------------------------
-  // Render
-  // --------------------------------------------------
 
   return (
     <div className="space-y-6">
 
+      {/* -------------------------------------------------- */}
       {/* Back */}
+      {/* -------------------------------------------------- */}
 
       <Link
-        to={backTo}
-        className="inline-flex items-center gap-2 text-sm text-ink-500 hover:text-ink-800"
+        to="/app/leads"
+        className="inline-flex items-center gap-2 text-sm text-ink-500 hover:text-forge-600"
       >
         <ArrowLeft className="h-4 w-4" />
-        Back to leads
+        Back to qualified leads
       </Link>
 
-      {/* Error message */}
 
-      {error && (
-        <div className="rounded-lg border border-red-100 bg-red-50 px-4 py-3">
-          <p className="text-sm text-red-600">
-            {error}
-          </p>
-        </div>
-      )}
+      {/* -------------------------------------------------- */}
+      {/* Lead Header */}
+      {/* -------------------------------------------------- */}
 
-      {/* Header */}
+      <div className="rounded-xl border border-ink-100 bg-white p-6 shadow-card">
 
-      <div className="mb-6 flex items-start justify-between">
-        <div>
-          <h1 className="font-display text-2xl font-semibold text-ink-900">
-            {lead.name}
-          </h1>
+        <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
 
-          <p className="mt-1 text-sm text-ink-400">
-            {lead.industry || "Uncategorized"}
-            {" · "}
-            {lead.location || "No location on file"}
-          </p>
-        </div>
+          <div>
 
-        <ScoreBadge
-          score={lead.lead_score ?? 0}
-          className="text-sm"
-        />
-      </div>
+            <div className="flex items-center gap-3">
 
-      {/* Main content */}
+              <h1 className="font-display text-2xl font-semibold text-ink-900">
+                {lead.name}
+              </h1>
 
-      <div className="grid grid-cols-3 gap-6">
-
-        {/* =========================================
-            LEFT COLUMN
-        ========================================== */}
-
-        <div className="col-span-2 space-y-6">
-
-          {/* Notes */}
-
-          <section className="rounded-xl border border-ink-100 bg-white p-5 shadow-card">
-
-            <h2 className="mb-3 text-sm font-semibold text-ink-800">
-              Notes
-            </h2>
-
-            <div className="mb-3 flex gap-2">
-
-              <input
-                value={draft}
-                onChange={(e) =>
-                  setDraft(e.target.value)
-                }
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    addNote();
-                  }
-                }}
-                placeholder="Add a note about this lead..."
-                className="flex-1 rounded-lg border border-ink-200 px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-forge-500"
-              />
-
-              <Button
-                onClick={addNote}
-                variant="secondary"
-                disabled={
-                  addingNote ||
-                  !draft.trim()
-                }
-              >
-                {addingNote
-                  ? "Adding..."
-                  : "Add"}
-              </Button>
+              <span className="inline-flex rounded-full bg-green-50 px-2.5 py-1 text-xs font-medium text-green-700">
+                Qualified
+              </span>
 
             </div>
 
-            <ul className="space-y-3">
-
-              {lead.notes?.map((note) => (
-                <li
-                  key={note.id}
-                  className="border-l-2 border-ink-100 pl-3 text-sm"
-                >
-                  <p className="text-ink-700">
-                    {note.text}
-                  </p>
-
-                  <p className="mt-0.5 text-xs text-ink-300">
-                    {note.created_at
-                      ? new Date(
-                          note.created_at
-                        ).toLocaleString()
-                      : ""}
-                  </p>
-                </li>
-              ))}
-
-              {(!lead.notes ||
-                lead.notes.length === 0) && (
-                <p className="text-sm text-ink-300">
-                  No notes yet.
-                </p>
-              )}
-
-            </ul>
-          </section>
-
-          {/* Lead Information */}
-
-          <section className="rounded-xl border border-ink-100 bg-white p-5 shadow-card">
-
-            <h2 className="mb-4 text-sm font-semibold text-ink-800">
-              Lead Information
-            </h2>
-
-            <div className="grid grid-cols-2 gap-5">
-
-              <Info
-                label="Business"
-                value={lead.name}
-              />
-
-              <Info
-                label="Industry"
-                value={lead.industry}
-              />
-
-              <Info
-                label="Location"
-                value={lead.location}
-              />
-
-              <Info
-                label="Country"
-                value={lead.country}
-              />
-
-              <Info
-                label="Source"
-                value={lead.source}
-              />
-
-              <Info
-                label="Created"
-                value={
-                  lead.created_at
-                    ? new Date(
-                        lead.created_at
-                      ).toLocaleDateString()
-                    : null
-                }
-              />
-
-            </div>
-          </section>
-
-        </div>
-
-        {/* =========================================
-            RIGHT COLUMN
-        ========================================== */}
-
-        <div className="space-y-6">
-
-          {/* =======================================
-              AI ANALYSIS
-          ======================================== */}
-
-          <section className="rounded-xl border border-ink-100 bg-white p-5 shadow-card">
-
-            <div className="flex items-start gap-3">
-
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-forge-50">
-                <Sparkles className="h-4 w-4 text-forge-600" />
-              </div>
-
-              <div>
-                <h2 className="text-sm font-semibold text-ink-800">
-                  AI Analysis
-                </h2>
-
-                <p className="mt-1 text-xs text-ink-400">
-                  Gemini analysis for this qualified lead.
-                </p>
-              </div>
-
-            </div>
-
-            {/* Analyze button */}
-
-            {!aiAnalysis && !analyzingAI && (
-              <div className="mt-4">
-
-                <Button
-                  onClick={analyzeWithAI}
-                  disabled={
-                    lead.qualification !==
-                    "qualified"
-                  }
-                  className="w-full"
-                >
-                  <Sparkles className="mr-2 h-4 w-4" />
-
-                  Analyze with AI
-                </Button>
-
-                {lead.qualification !==
-                  "qualified" && (
-                  <p className="mt-2 text-xs text-ink-400">
-                    Only qualified leads can be analyzed.
-                  </p>
-                )}
-
-                {aiError && (
-                  <p className="mt-3 text-xs text-red-500">
-                    {aiError}
-                  </p>
-                )}
-
-              </div>
-            )}
-
-            {/* Loading */}
-
-            {analyzingAI && (
-              <div className="mt-4 rounded-lg bg-ink-50 px-3 py-4">
-
-                <div className="flex items-center gap-2">
-
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-ink-200 border-t-forge-500" />
-
-                  <p className="text-sm text-ink-600">
-                    Analyzing lead...
-                  </p>
-
-                </div>
-
-                <p className="mt-2 text-xs text-ink-400">
-                  Gemini is analyzing the qualified lead.
-                </p>
-
-              </div>
-            )}
-
-            {/* Error */}
-
-            {!analyzingAI &&
-              aiError &&
-              !aiAnalysis && (
-                <div className="mt-4 rounded-lg border border-red-100 bg-red-50 p-3">
-
-                  <p className="text-xs text-red-600">
-                    {aiError}
-                  </p>
-
-                </div>
-              )}
-
-            {/* AI Result */}
-
-            {aiAnalysis && !analyzingAI && (
-              <div className="mt-5 space-y-5">
-
-                {/* Score + Priority */}
-
-                <div className="grid grid-cols-2 gap-3">
-
-                  <div className="rounded-lg bg-ink-50 p-3">
-
-                    <p className="text-xs font-medium uppercase tracking-wide text-ink-400">
-                      AI Score
-                    </p>
-
-                    <p className="mt-1 text-xl font-semibold text-ink-900">
-                      {aiAnalysis.score ?? 0}
-
-                      <span className="text-sm font-normal text-ink-400">
-                        {" "}/ 100
-                      </span>
-                    </p>
-
-                  </div>
-
-                  <div className="rounded-lg bg-ink-50 p-3">
-
-                    <p className="text-xs font-medium uppercase tracking-wide text-ink-400">
-                      Priority
-                    </p>
-
-                    <p className="mt-1 text-sm font-semibold uppercase text-ink-800">
-                      {aiAnalysis.priority ||
-                        "N/A"}
-                    </p>
-
-                  </div>
-
-                </div>
-
-                {/* Summary */}
-
-                {aiAnalysis.summary && (
-                  <div>
-
-                    <p className="text-xs font-medium uppercase tracking-wide text-ink-400">
-                      Summary
-                    </p>
-
-                    <p className="mt-1 text-sm leading-6 text-ink-600">
-                      {aiAnalysis.summary}
-                    </p>
-
-                  </div>
-                )}
-
-                {/* Opportunities */}
-
-                {aiAnalysis.opportunities?.length >
-                  0 && (
-                  <div>
-
-                    <p className="text-xs font-medium uppercase tracking-wide text-ink-400">
-                      Opportunities
-                    </p>
-
-                    <ul className="mt-2 space-y-2">
-
-                      {aiAnalysis.opportunities.map(
-                        (opportunity, index) => (
-                          <li
-                            key={index}
-                            className="flex gap-2 text-sm text-ink-600"
-                          >
-                            <span className="text-forge-500">
-                              •
-                            </span>
-
-                            <span>
-                              {opportunity}
-                            </span>
-                          </li>
-                        )
-                      )}
-
-                    </ul>
-                  </div>
-                )}
-
-                {/* Recommended Services */}
-
-                {aiAnalysis
-                  .recommended_services
-                  ?.length > 0 && (
-                  <div>
-
-                    <p className="text-xs font-medium uppercase tracking-wide text-ink-400">
-                      Recommended Services
-                    </p>
-
-                    <ul className="mt-2 space-y-2">
-
-                      {aiAnalysis.recommended_services.map(
-                        (service, index) => (
-                          <li
-                            key={index}
-                            className="flex gap-2 text-sm text-ink-600"
-                          >
-                            <span className="text-forge-500">
-                              •
-                            </span>
-
-                            <span>
-                              {service}
-                            </span>
-                          </li>
-                        )
-                      )}
-
-                    </ul>
-                  </div>
-                )}
-
-                {/* Outreach Angle */}
-
-                {aiAnalysis.outreach_angle && (
-                  <div>
-
-                    <p className="text-xs font-medium uppercase tracking-wide text-ink-400">
-                      Outreach Angle
-                    </p>
-
-                    <div className="mt-2 rounded-lg bg-ink-50 p-3">
-
-                      <p className="text-sm leading-6 text-ink-600">
-                        {aiAnalysis.outreach_angle}
-                      </p>
-
-                    </div>
-
-                  </div>
-                )}
-
-                {/* Model */}
-
-                {aiAnalysis.model && (
-                  <p className="pt-1 text-xs text-ink-300">
-                    Powered by {aiAnalysis.model}
-                  </p>
-                )}
-
-              </div>
-            )}
-
-          </section>
-
-          {/* =======================================
-              AUTOMATIC QUALIFICATION
-          ======================================== */}
-
-          <section className="rounded-xl border border-ink-100 bg-white p-5 shadow-card">
-
-            <h2 className="mb-3 text-sm font-semibold text-ink-800">
-              Qualification
-            </h2>
-
-            <div className="mb-4">
-              <ScoreBadge
-                score={lead.lead_score ?? 0}
-              />
-            </div>
-
-            <div className="rounded-lg bg-ink-50 px-3 py-3">
-
-              <p className="text-xs font-medium uppercase tracking-wide text-ink-400">
-                Qualification
-              </p>
-
-              <p className="mt-1 text-sm font-semibold capitalize text-ink-800">
-                {(lead.qualification ||
-                  "unqualified"
-                ).replaceAll("_", " ")}
-              </p>
-
-            </div>
-
-            <div className="mt-4">
-
-              <p className="text-xs text-ink-400">
-                Qualification is calculated automatically
-                by the backend based on the available
-                business information.
-              </p>
-
-            </div>
-
-          </section>
-
-          {/* =======================================
-              STATUS
-          ======================================== */}
-
-          <section className="rounded-xl border border-ink-100 bg-white p-5 shadow-card">
-
-            <h2 className="mb-3 text-sm font-semibold text-ink-800">
-              Lead Status
-            </h2>
-
-            <StatusBadge
-              status={lead.status}
-            />
-
-            <p className="mt-3 text-xs text-ink-400">
-              Status is managed automatically by the
-              qualification process.
+            <p className="mt-2 text-sm text-ink-400">
+              Qualified lead #{lead.id}
             </p>
 
-          </section>
+          </div>
 
-          {/* =======================================
-              CONTACT
-          ======================================== */}
 
-          <section className="rounded-xl border border-ink-100 bg-white p-5 shadow-card">
+          {/* Score */}
 
-            <h2 className="mb-3 text-sm font-semibold text-ink-800">
-              Contact
+          <div className="flex items-center gap-3">
+
+            <span className="text-sm text-ink-400">
+              Lead Score
+            </span>
+
+            <ScoreBadge
+              score={lead.lead_score ?? 0}
+            />
+
+          </div>
+
+        </div>
+
+      </div>
+
+
+      {/* -------------------------------------------------- */}
+      {/* Lead Information */}
+      {/* -------------------------------------------------- */}
+
+      <div className="grid gap-6 lg:grid-cols-3">
+
+
+        {/* ------------------------------------------------ */}
+        {/* Main Information */}
+        {/* ------------------------------------------------ */}
+
+        <div className="lg:col-span-2">
+
+          <div className="rounded-xl border border-ink-100 bg-white p-6 shadow-card">
+
+            <h2 className="font-display text-lg font-semibold text-ink-900">
+              Business Information
             </h2>
 
-            <ul className="space-y-3 text-sm text-ink-600">
 
-              {/* Email */}
+            <div className="mt-5 grid gap-5 sm:grid-cols-2">
 
-              <li className="flex items-start gap-2">
 
-                <Mail className="mt-0.5 h-4 w-4 shrink-0 text-ink-300" />
+              {/* Industry */}
 
-                {lead.email ? (
-                  <a
-                    href={`mailto:${lead.email}`}
-                    className="break-all hover:text-forge-600"
-                  >
-                    {lead.email}
-                  </a>
-                ) : (
-                  <span className="text-ink-300">
-                    No email on file
-                  </span>
-                )}
+              <div>
 
-              </li>
+                <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-ink-400">
+
+                  <Building2 className="h-4 w-4" />
+
+                  Industry
+
+                </div>
+
+                <p className="mt-1 text-sm text-ink-700">
+                  {lead.industry || "--"}
+                </p>
+
+              </div>
+
+
+              {/* Location */}
+
+              <div>
+
+                <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-ink-400">
+
+                  <MapPin className="h-4 w-4" />
+
+                  Location
+
+                </div>
+
+                <p className="mt-1 text-sm text-ink-700">
+                  {lead.location || "--"}
+                </p>
+
+              </div>
+
 
               {/* Phone */}
 
-              <li className="flex items-start gap-2">
+              <div>
 
-                <Phone className="mt-0.5 h-4 w-4 shrink-0 text-ink-300" />
+                <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-ink-400">
+
+                  <Phone className="h-4 w-4" />
+
+                  Phone
+
+                </div>
 
                 {lead.phone ? (
                   <a
                     href={`tel:${lead.phone}`}
-                    className="hover:text-forge-600"
+                    className="mt-1 block text-sm text-forge-600 hover:underline"
                   >
                     {lead.phone}
                   </a>
                 ) : (
-                  <span className="text-ink-300">
-                    No phone on file
-                  </span>
+                  <p className="mt-1 text-sm text-ink-400">
+                    No phone available
+                  </p>
                 )}
 
-              </li>
+              </div>
+
+
+              {/* Email */}
+
+              <div>
+
+                <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-ink-400">
+
+                  <Mail className="h-4 w-4" />
+
+                  Email
+
+                </div>
+
+                {lead.email ? (
+                  <a
+                    href={`mailto:${lead.email}`}
+                    className="mt-1 block break-all text-sm text-forge-600 hover:underline"
+                  >
+                    {lead.email}
+                  </a>
+                ) : (
+                  <p className="mt-1 text-sm text-ink-400">
+                    No email available
+                  </p>
+                )}
+
+              </div>
+
 
               {/* Website */}
 
-              <li className="flex items-start gap-2">
+              <div>
 
-                <Globe className="mt-0.5 h-4 w-4 shrink-0 text-ink-300" />
+                <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-ink-400">
+
+                  <Globe className="h-4 w-4" />
+
+                  Website
+
+                </div>
 
                 {lead.website ? (
                   <a
                     href={
-                      lead.website.startsWith(
-                        "http://"
-                      ) ||
-                      lead.website.startsWith(
-                        "https://"
-                      )
+                      lead.website.startsWith("http")
                         ? lead.website
                         : `https://${lead.website}`
                     }
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="break-all hover:text-forge-600"
+                    className="mt-1 block break-all text-sm text-forge-600 hover:underline"
                   >
                     {lead.website}
                   </a>
                 ) : (
-                  <span className="text-ink-300">
-                    No website
-                  </span>
+                  <p className="mt-1 text-sm text-ink-400">
+                    No website available
+                  </p>
                 )}
 
-              </li>
+              </div>
 
-            </ul>
 
-          </section>
+              {/* Source */}
+
+              <div>
+
+                <div className="text-xs font-medium uppercase tracking-wide text-ink-400">
+                  Source
+                </div>
+
+                <p className="mt-1 text-sm capitalize text-ink-700">
+                  {lead.source || "manual"}
+                </p>
+
+              </div>
+
+            </div>
+
+          </div>
 
         </div>
+
+
+        {/* ------------------------------------------------ */}
+        {/* AI Analysis Card */}
+        {/* ------------------------------------------------ */}
+
+        <div>
+
+          <div className="rounded-xl border border-ink-100 bg-white p-6 shadow-card">
+
+            <div className="flex items-center gap-2">
+
+              <Sparkles className="h-5 w-5 text-forge-500" />
+
+              <h2 className="font-display text-lg font-semibold text-ink-900">
+                AI Analysis
+              </h2>
+
+            </div>
+
+
+            <p className="mt-2 text-sm leading-6 text-ink-400">
+              Use Gemini to analyze this qualified lead
+              and identify potential opportunities.
+            </p>
+
+
+            <Button
+              onClick={handleAnalyze}
+              disabled={analyzing}
+              className="mt-5 w-full"
+            >
+
+              <Sparkles className="h-4 w-4" />
+
+              {analyzing
+                ? "Analyzing..."
+                : "AI Analyze"}
+
+            </Button>
+
+
+            {/* AI Error */}
+
+            {aiError && (
+
+              <div className="mt-4 rounded-lg border border-red-100 bg-red-50 p-3">
+
+                <p className="text-sm text-red-600">
+                  {aiError}
+                </p>
+
+              </div>
+
+            )}
+
+          </div>
+
+        </div>
+
       </div>
-    </div>
-  );
-}
 
 
-// --------------------------------------------------
-// Info component
-// --------------------------------------------------
+      {/* -------------------------------------------------- */}
+      {/* AI Analysis Result */}
+      {/* -------------------------------------------------- */}
 
-function Info({ label, value }) {
-  return (
-    <div>
-      <p className="text-xs font-medium text-ink-400">
-        {label}
-      </p>
+      {analysis && (
 
-      <p className="mt-1 text-sm text-ink-700">
-        {value || "Not available"}
-      </p>
+        <div className="rounded-xl border border-ink-100 bg-white p-6 shadow-card">
+
+          <div className="flex items-center justify-between">
+
+            <div>
+
+              <div className="flex items-center gap-2">
+
+                <Sparkles className="h-5 w-5 text-forge-500" />
+
+                <h2 className="font-display text-lg font-semibold text-ink-900">
+                  Gemini Analysis
+                </h2>
+
+              </div>
+
+              {analysis.model && (
+                <p className="mt-1 text-xs text-ink-400">
+                  Model: {analysis.model}
+                </p>
+              )}
+
+            </div>
+
+
+            {analysis.score !== null &&
+              analysis.score !== undefined && (
+
+                <ScoreBadge
+                  score={analysis.score}
+                />
+
+              )}
+
+          </div>
+
+
+          {/* Priority */}
+
+          {analysis.priority && (
+
+            <div className="mt-6">
+
+              <p className="text-xs font-medium uppercase tracking-wide text-ink-400">
+                Priority
+              </p>
+
+              <p className="mt-1 text-sm font-medium capitalize text-ink-800">
+                {analysis.priority}
+              </p>
+
+            </div>
+
+          )}
+
+
+          {/* Summary */}
+
+          {analysis.summary && (
+
+            <div className="mt-6">
+
+              <p className="text-xs font-medium uppercase tracking-wide text-ink-400">
+                Summary
+              </p>
+
+              <p className="mt-2 text-sm leading-6 text-ink-600">
+                {analysis.summary}
+              </p>
+
+            </div>
+
+          )}
+
+
+          {/* Opportunities */}
+
+          {analysis.opportunities?.length > 0 && (
+
+            <div className="mt-6">
+
+              <p className="text-xs font-medium uppercase tracking-wide text-ink-400">
+                Opportunities
+              </p>
+
+              <ul className="mt-2 space-y-2">
+
+                {analysis.opportunities.map(
+                  (opportunity, index) => (
+
+                    <li
+                      key={index}
+                      className="rounded-lg bg-ink-50 px-3 py-2 text-sm text-ink-600"
+                    >
+                      {opportunity}
+                    </li>
+
+                  )
+                )}
+
+              </ul>
+
+            </div>
+
+          )}
+
+
+          {/* Recommended Services */}
+
+          {analysis.recommended_services?.length > 0 && (
+
+            <div className="mt-6">
+
+              <p className="text-xs font-medium uppercase tracking-wide text-ink-400">
+                Recommended Services
+              </p>
+
+              <div className="mt-2 flex flex-wrap gap-2">
+
+                {analysis.recommended_services.map(
+                  (service, index) => (
+
+                    <span
+                      key={index}
+                      className="rounded-full bg-forge-50 px-3 py-1 text-xs font-medium text-forge-700"
+                    >
+                      {service}
+                    </span>
+
+                  )
+                )}
+
+              </div>
+
+            </div>
+
+          )}
+
+
+          {/* Outreach Angle */}
+
+          {analysis.outreach_angle && (
+
+            <div className="mt-6">
+
+              <p className="text-xs font-medium uppercase tracking-wide text-ink-400">
+                Outreach Angle
+              </p>
+
+              <p className="mt-2 rounded-lg bg-ink-50 p-4 text-sm leading-6 text-ink-600">
+                {analysis.outreach_angle}
+              </p>
+
+            </div>
+
+          )}
+
+        </div>
+
+      )}
+
     </div>
   );
 }
