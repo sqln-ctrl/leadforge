@@ -7,7 +7,10 @@ export const api = axios.create({
   baseURL: API_BASE_URL,
 });
 
-// Attach JWT token to every request
+// ==================================================
+// JWT TOKEN
+// ==================================================
+
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("leadforge_token");
@@ -21,7 +24,10 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Handle expired/invalid token
+// ==================================================
+// HANDLE AUTH ERRORS
+// ==================================================
+
 api.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -37,12 +43,11 @@ api.interceptors.response.use(
   }
 );
 
-// =========================
+// ==================================================
 // AUTH API
-// =========================
+// ==================================================
 
 export const authApi = {
-  // Login
   login: (email, password) => {
     const form = new URLSearchParams();
 
@@ -56,25 +61,25 @@ export const authApi = {
     });
   },
 
-  // Register
   register: (payload) => {
     return api.post("/auth/register", payload);
   },
 
-  // Current logged-in user
   me: () => {
     return api.get("/auth/me");
   },
 };
 
-// =========================
-// BUSINESS / LEADS API
-// =========================
+// ==================================================
+// BUSINESS API
+// ==================================================
 
 export const leadsApi = {
-  // Get all businesses
+  // Get businesses
   list: (params) => {
-    return api.get("/businesses/", { params });
+    return api.get("/businesses/", {
+      params,
+    });
   },
 
   // Get one business
@@ -82,34 +87,48 @@ export const leadsApi = {
     return api.get(`/businesses/${id}`);
   },
 
+  // Update business status
   updateStatus: (id, status) => {
-    return api.patch(`/businesses/${id}`, { status });
+    return api.patch(`/businesses/${id}`, {
+      status,
+    });
   },
 
+  // Add note to business
   addNote: (id, text) => {
     return api.post(`/businesses/${id}/notes`, {
       text,
     });
   },
 
+  // Delete business
   delete: (id) => {
     return api.delete(`/businesses/${id}`);
   },
 };
 
+// ==================================================
+// DISCOVERY API
+// ==================================================
 
-// =========================
+export const discoveryApi = {
+  // Search businesses using Geoapify
+  search: (data) => {
+    return api.post("/discovery/search", data);
+  },
+};
+
+// ==================================================
 // QUALIFIED LEADS API
-// =========================
+// ==================================================
 
 export const qualifiedLeadsApi = {
-
-  // ONLY records from qualified_leads
+  // Get ONLY qualified leads
   list: () => {
     return api.get("/qualified-leads/");
   },
 
-  // Get one QualifiedLead
+  // Get one qualified lead
   get: (id) => {
     return api.get(`/qualified-leads/${id}`);
   },
@@ -120,15 +139,13 @@ export const qualifiedLeadsApi = {
   },
 };
 
-
-// =========================
+// ==================================================
 // AI API
-// =========================
+// ==================================================
 
 export const aiApi = {
+  // Gemini analyzes ONLY a QualifiedLead
   analyze: (qualifiedLeadId) => {
-    return api.post(
-      `/ai/analyze/${qualifiedLeadId}`
-    );
+    return api.post(`/ai/analyze/${qualifiedLeadId}`);
   },
 };

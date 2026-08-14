@@ -155,7 +155,7 @@ export default function LeadDetail() {
       <div className="space-y-4">
 
         <Link
-          to="/app/leads"
+          to="/app"
           className="inline-flex items-center gap-2 text-sm text-ink-500 hover:text-forge-600"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -182,7 +182,7 @@ export default function LeadDetail() {
       {/* -------------------------------------------------- */}
 
       <Link
-        to="/app/leads"
+        to="/app"
         className="inline-flex items-center gap-2 text-sm text-ink-500 hover:text-forge-600"
       >
         <ArrowLeft className="h-4 w-4" />
