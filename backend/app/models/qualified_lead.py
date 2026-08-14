@@ -61,3 +61,10 @@ class QualifiedLead(Base):
         uselist=False,
         cascade="all, delete-orphan",
     )
+
+    proposal = relationship(
+        "Proposal",
+        back_populates="qualified_lead",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )
