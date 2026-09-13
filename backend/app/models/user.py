@@ -1,7 +1,7 @@
 import uuid
 from enum import Enum as PyEnum
 
-from sqlalchemy import Column, String, Enum, Integer
+from sqlalchemy import Boolean, Column, DateTime, String, Enum, Integer
 from sqlalchemy.dialects.postgresql import UUID
 
 from app.core.db import Base
@@ -38,4 +38,18 @@ class User(Base):
         nullable=False
     )
 
-    
+    email_verified = Column(
+        Boolean,
+        nullable=False,
+        default=False,
+    )
+
+    email_verification_token_hash = Column(
+        String,
+        nullable=True,
+    )
+
+    email_verification_expires_at = Column(
+        DateTime,
+        nullable=True,
+    )

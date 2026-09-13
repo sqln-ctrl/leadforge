@@ -65,8 +65,24 @@ export const authApi = {
     return api.post("/auth/register", payload);
   },
 
+  verifyEmail: (token) => {
+    return api.post("/auth/verify-email", { token });
+  },
+
+  resendVerification: (email) => {
+    return api.post("/auth/resend-verification", { email });
+  },
+
   me: () => {
     return api.get("/auth/me");
+  },
+
+  updateProfile: (payload) => {
+    return api.put("/auth/me", payload);
+  },
+
+  changePassword: (payload) => {
+    return api.put("/auth/me/password", payload);
   },
 };
 
@@ -112,7 +128,7 @@ export const leadsApi = {
 // ==================================================
 
 export const discoveryApi = {
-  // Search businesses using Geoapify
+  // Search businesses using Google Places
   search: (data) => {
     return api.post("/discovery/search", data);
   },

@@ -35,9 +35,9 @@ export default function Register() {
     try {
       await register(form);
 
-      toast.success("Account created successfully!");
+      toast.success("Check your inbox to verify your email.");
 
-      navigate("/login");
+      navigate("/verify-email-sent", { state: { email: form.email } });
     } catch (err) {
       console.error(err);
 

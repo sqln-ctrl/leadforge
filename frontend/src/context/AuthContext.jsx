@@ -33,13 +33,19 @@ export function AuthProvider({ children }) {
   return data;
 }
 
+  async function updateUser(payload) {
+    const { data } = await authApi.updateProfile(payload);
+    setUser(data);
+    return data;
+  }
+
   function logout() {
     localStorage.removeItem("leadforge_token");
     setUser(null);
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, register, updateUser, logout }}>
       {children}
     </AuthContext.Provider>
   );
