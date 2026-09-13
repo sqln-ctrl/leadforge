@@ -142,8 +142,8 @@ Search -> Discover Businesses -> Enrich Data -> Audit Website -> Score Lead -> E
 git clone <repo-url>
 cd <repo-name>
 
-# copy environment variables
-cp .env.example .env
+# copy backend environment variables, then add your API keys
+cp backend/.env.example backend/.env
 
 # start backend, database, redis, and celery
 docker compose up --build
@@ -156,16 +156,19 @@ npm run dev
 
 ## Environment Variables
 
-See `.env.example` for the full list. Key variables include:
+See `backend/.env.example` for the full list. Key variables include:
 
 ```
 DATABASE_URL=
 REDIS_URL=
 SECRET_KEY=
-GOOGLE_PLACES_API_KEY=
-HUNTER_IO_API_KEY=
-PAGESPEED_API_KEY=
+GOOGLE_MAPS_API_KEY=
+GEMINI_API_KEY=
 ```
+
+For business discovery, enable **Places API (New)** and billing for
+`GOOGLE_MAPS_API_KEY` in Google Cloud Console. Restrict the key to the Places
+API and to the backend's server IPs before deploying.
 
 ## Development Roadmap
 

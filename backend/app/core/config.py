@@ -1,5 +1,6 @@
 from functools import lru_cache
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -19,6 +20,7 @@ class Settings(BaseSettings):
     # --- Security ---
     SECRET_KEY: str = "change-me-in-env"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24
+    FRONTEND_URL: str = "http://localhost:5173"
 
     # --- CORS ---
     CORS_ORIGINS: list[str] = ["http://localhost:5173"]
@@ -33,8 +35,27 @@ class Settings(BaseSettings):
     CELERY_RESULT_BACKEND: str = "redis://redis:6379/2"
 
     # --- External APIs ---
-    GEOAPIFY_API_KEY: str
+    GOOGLE_MAPS_API_KEY: str
     GEMINI_API_KEY: str
+
+    # --- Transactional email ---
+    SMTP_HOST: str = ""
+    SMTP_PORT: int = 587
+    SMTP_USERNAME: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_FROM_EMAIL: str = ""
+    SMTP_USE_TLS: bool = True
+
+    @field_validator("DEBUG", mode="before")
+    @classmethod
+    def normalize_debug_value(cls, value):
+        if isinstance(value, str):
+            normalized = value.strip().lower()
+            if normalized in {"release", "production", "prod"}:
+                return False
+            if normalized in {"development", "dev"}:
+                return True
+        return value
 
 
 
