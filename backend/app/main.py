@@ -7,6 +7,7 @@ from redis.exceptions import RedisError
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.api.v1.router import api_router
+from app.core.config import settings
 from app.core.db import SessionLocal
 from app.core.redis import redis_client
 from app.services.business_service import delete_expired_businesses
@@ -44,11 +45,9 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-origins = ["http://localhost:5173"]
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
