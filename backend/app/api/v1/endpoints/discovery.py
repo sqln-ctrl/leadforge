@@ -5,7 +5,11 @@ from sqlalchemy.orm import Session
 from app.core.db import get_db
 from app.schemas.business import BusinessCreate, BusinessResponse
 from app.services import business_service
-from app.services.geoapify import search_places, GeoapifyError
+from app.services.google_places import (
+    GooglePlacesError,
+    MAX_PROVIDER_RESULTS,
+    search_places,
+)
 
 
 router = APIRouter(prefix="/discovery")
@@ -15,12 +19,14 @@ class DiscoveryRequest(BaseModel):
     city: str
     category: str
     country: str | None = None
-    limit: int = Field(default=20, ge=1, le=20)
+    limit: int = Field(default=20, ge=1, le=100)
 
 
 class DiscoveryResult(BaseModel):
     created: list[BusinessResponse]
     skipped_existing: int
+    provider_results: int
+    provider_limit: int
 
 
 @router.post(
@@ -40,8 +46,8 @@ def run_discovery(
             limit=payload.limit,
         )
 
-    except GeoapifyError as exc:
-        print("GEOAPIFY ERROR:", exc)
+    except GooglePlacesError as exc:
+        print("GOOGLE PLACES ERROR:", exc)
 
         raise HTTPException(
             status_code=502,
@@ -83,4 +89,6 @@ def run_discovery(
     return DiscoveryResult(
         created=created,
         skipped_existing=skipped,
+        provider_results=len(found),
+        provider_limit=MAX_PROVIDER_RESULTS,
     )

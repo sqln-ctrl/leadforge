@@ -29,13 +29,15 @@ function loadCache() {
   }
 }
 
-function saveCache(form, results, skipped) {
+function saveCache(form, results, skipped, providerResults, providerLimit) {
   localStorage.setItem(
     CACHE_KEY,
     JSON.stringify({
       form,
       results,
       skipped,
+      providerResults,
+      providerLimit,
       timestamp: Date.now(),
     })
   );
@@ -46,10 +48,13 @@ export default function Discovery() {
     city: "",
     category: "",
     country: "",
+    limit: 20,
   });
 
   const [results, setResults] = useState(null);
   const [skipped, setSkipped] = useState(0);
+  const [providerResults, setProviderResults] = useState(0);
+  const [providerLimit, setProviderLimit] = useState(60);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -57,9 +62,11 @@ export default function Discovery() {
     const cached = loadCache();
 
     if (cached) {
-      setForm(cached.form);
+      setForm((current) => ({ ...current, ...cached.form }));
       setResults(cached.results);
       setSkipped(cached.skipped);
+      setProviderResults(cached.providerResults || 0);
+      setProviderLimit(cached.providerLimit || 60);
     }
   }, []);
 
@@ -75,15 +82,20 @@ export default function Discovery() {
         city: form.city,
         category: form.category,
         country: form.country || undefined,
+        limit: Number(form.limit),
       });
 
       setResults(data.created);
       setSkipped(data.skipped_existing);
+      setProviderResults(data.provider_results);
+      setProviderLimit(data.provider_limit);
 
       saveCache(
         form,
         data.created,
-        data.skipped_existing
+        data.skipped_existing,
+        data.provider_results,
+        data.provider_limit
       );
     } catch (err) {
       setError(
@@ -109,7 +121,7 @@ export default function Discovery() {
 
       <div className="rounded-xl border border-ink-100 bg-white p-6 shadow-card">
         <form
-          className="grid grid-cols-3 gap-4"
+          className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4"
           onSubmit={handleSubmit}
         >
           <Input
@@ -153,9 +165,25 @@ export default function Discovery() {
             }
           />
 
+          <Input
+            label="Lead limit"
+            name="limit"
+            type="number"
+            min="1"
+            max="100"
+            required
+            value={form.limit}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                limit: e.target.value,
+              })
+            }
+          />
+
           <Button
             type="submit"
-            className="col-span-3"
+            className="md:col-span-2 xl:col-span-4"
             disabled={loading}
           >
             <Search className="h-4 w-4" />
@@ -163,6 +191,11 @@ export default function Discovery() {
             {loading ? "Searching..." : "Run discovery"}
           </Button>
         </form>
+
+        <p className="mt-3 text-xs text-ink-400">
+          Request up to 100 leads per run. Google Places Text Search returns a
+          maximum of 60 results per search.
+        </p>
 
         {error && (
           <p className="mt-4 text-sm text-red-600">
@@ -178,6 +211,9 @@ export default function Discovery() {
 
               {skipped > 0 &&
                 ` -- ${skipped} already in your list, skipped`}
+
+              {providerResults >= providerLimit &&
+                ` -- Google returned its ${providerLimit}-lead maximum`}
             </p>
 
             {results.length === 0 ? (
@@ -187,8 +223,8 @@ export default function Discovery() {
                 </p>
 
                 <p className="mt-1 max-w-sm text-xs text-ink-400">
-                  Try a broader category, or a bigger/better-mapped
-                  city -- OpenStreetMap coverage varies by region.
+                  Try a broader category or a larger city. Google may not have
+                  matching businesses for every query.
                 </p>
               </div>
             ) : (
@@ -196,8 +232,7 @@ export default function Discovery() {
                 {results.map((lead) => (
                   <li key={lead.id}>
                     <Link
-                      to={`/app/leads/${lead.id}`}
-                      state={{ from: "/app/discovery" }}
+                      to="/app/crm"
                       className="flex items-center justify-between px-4 py-3 hover:bg-ink-50/60"
                     >
                       <div>
@@ -210,7 +245,9 @@ export default function Discovery() {
                         </p>
                       </div>
 
-                      <ArrowRight className="h-4 w-4 text-ink-300" />
+                      <span className="flex items-center gap-1 text-xs font-medium text-forge-600">
+                        Open CRM <ArrowRight className="h-4 w-4" />
+                      </span>
                     </Link>
                   </li>
                 ))}
