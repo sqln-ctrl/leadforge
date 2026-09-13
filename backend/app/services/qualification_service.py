@@ -52,17 +52,18 @@ def qualify_business(
 
     business.lead_score = score
 
-    if score >= qualification_threshold:
+    has_contact_details = bool(business.email or business.phone)
+    existing_qualified_lead = (
+        db.query(QualifiedLead)
+        .filter(
+            QualifiedLead.business_id == business.id
+        )
+        .first()
+    )
+
+    if has_contact_details and score >= qualification_threshold:
 
         business.qualification = "qualified"
-
-        existing_qualified_lead = (
-            db.query(QualifiedLead)
-            .filter(
-                QualifiedLead.business_id == business.id
-            )
-            .first()
-        )
 
         if not existing_qualified_lead:
 
@@ -94,5 +95,8 @@ def qualify_business(
 
     else:
         business.qualification = "unqualified"
+
+        if existing_qualified_lead:
+            db.delete(existing_qualified_lead)
 
     return business

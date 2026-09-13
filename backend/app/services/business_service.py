@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta
+
 from sqlalchemy.orm import Session, joinedload
 
 from app.models.business import Business, LeadStatus
@@ -141,3 +143,24 @@ def delete_business(
     db.commit()
 
     return True
+
+
+def delete_expired_businesses(
+    db: Session,
+    expiry_hours: int = 24,
+) -> int:
+    """Remove discovered businesses that have been in the CRM for too long."""
+    cutoff = datetime.utcnow() - timedelta(hours=expiry_hours)
+    expired_businesses = (
+        db.query(Business)
+        .filter(Business.created_at < cutoff)
+        .all()
+    )
+
+    for business in expired_businesses:
+        db.delete(business)
+
+    if expired_businesses:
+        db.commit()
+
+    return len(expired_businesses)

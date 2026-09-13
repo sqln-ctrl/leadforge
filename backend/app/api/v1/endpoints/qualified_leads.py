@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
@@ -21,6 +22,12 @@ def get_qualified_leads(
 
     qualified_leads = (
         db.query(QualifiedLead)
+        .filter(
+            or_(
+                QualifiedLead.email.isnot(None),
+                QualifiedLead.phone.isnot(None),
+            )
+        )
         .order_by(
             QualifiedLead.qualified_at.desc()
         )

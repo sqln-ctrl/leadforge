@@ -1,13 +1,15 @@
 import { NavLink, Link } from "react-router-dom";
 import clsx from "clsx";
-import { LayoutGrid, BarChart3, Search, LogOut } from "lucide-react";
+import { LayoutGrid, BarChart3, Search, LogOut, Settings, UsersRound } from "lucide-react";
 import Logomark from "./Logomark";
 import { useAuth } from "../../context/AuthContext";
 
 const NAV_ITEMS = [
   { to: "/app", label: "Leads", icon: LayoutGrid, end: true },
   { to: "/app/discovery", label: "Discovery", icon: Search },
+  { to: "/app/crm", label: "CRM", icon: UsersRound },
   { to: "/app/analytics", label: "Analytics", icon: BarChart3 },
+  { to: "/app/settings", label: "Settings", icon: Settings },
 ];
 
 export default function Sidebar() {
